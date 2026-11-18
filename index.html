@@ -30,8 +30,27 @@ button{cursor:pointer;border:0;background:none}
 #splash.hide{opacity:0;pointer-events:none}
 #splash .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 28%,rgba(0,0,0,0) 55%,rgba(20,10,4,.9) 100%)}
 #splash h1{position:relative;margin:0 auto;width:min(84vw,380px);animation:pop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 3px 0 #6b4423) drop-shadow(0 6px 14px rgba(0,0,0,.7))}
-#splash h1 svg{display:block;width:100%;height:auto;overflow:visible}
-#splash h1 text{font-family:inherit;font-weight:900}
+#splash h1 img{display:block;margin:0 auto}
+#splash h1 .logo{width:100%;height:auto}
+#splash h1 .sw{width:26%;margin-bottom:-2%;transform-origin:50% 8%;animation:swing 2.4s ease-in-out .5s infinite}
+@keyframes swing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+.shine{position:relative;overflow:hidden}
+.shine::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.35) 50%,transparent 60%);transform:translateX(-100%);animation:shine 3.5s ease-in-out 1s infinite}
+@keyframes shine{0%{transform:translateX(-100%)}40%,100%{transform:translateX(100%)}}
+.h3i{display:flex;align-items:center;gap:8px}
+.h3i img{height:38px;width:auto;filter:drop-shadow(0 3px 4px rgba(60,30,10,.25))}
+.tick{animation:tick 1s steps(1) infinite}
+@keyframes tick{0%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+.payday{margin-top:8px}
+.payday .bar{height:8px;background:rgba(255,255,255,.22);border-radius:99px;overflow:hidden;margin:4px 14px 0}
+.payday .bar i{display:block;height:100%;background:linear-gradient(90deg,#ffd166,#ffe9a8);border-radius:99px;transition:width .8s ease}
+.payday .lbl2{font-size:.78rem;opacity:.95}
+.greet{font-size:.9rem;font-weight:700;color:#ffd166;margin-bottom:2px}
+button:active,.big:active{transform:scale(.96)}
+button,.big{transition:transform .08s}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:90}
+.pop{animation:popv .35s ease}
+@keyframes popv{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
 #splash .sub{position:relative;text-align:center;color:#f3e3cc;margin:14px 0 calc(28px + var(--safe-bot));font-size:.9rem}
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 
@@ -155,7 +174,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 .rel h4{margin:12px 0 2px;font-size:.92rem}
 
 /* Toast + modal */
-#toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-bot));transform:translateX(-50%) translateY(20px);background:#2a1d13;color:#fff;padding:10px 16px;border-radius:999px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;white-space:nowrap}
+#toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-bot));transform:translateX(-50%) translateY(20px);background:#2a1d13;color:#fff;padding:10px 16px;border-radius:18px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:88vw;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #modal{position:fixed;inset:0;background:rgba(20,10,4,.5);display:none;align-items:center;justify-content:center;z-index:70;padding:20px}
 #modal.show{display:flex}
@@ -190,10 +209,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 <!-- Splash screen -->
 <div id="splash" role="img" aria-label="Stacy's Time Tracker">
   <div class="shade"></div>
-  <h1><svg viewBox="0 0 300 112" aria-hidden="true">
-    <text x="150" y="44" text-anchor="middle" font-size="44" fill="#fff" textLength="292" lengthAdjust="spacing">STACY'S</text>
-    <text x="150" y="102" text-anchor="middle" font-size="50" fill="#ffd166" textLength="292" lengthAdjust="spacingAndGlyphs">Time Tracker!!</text>
-  </svg></h1>
+  <h1><img class="sw" src="img/stopwatch.png" alt=""><img class="logo" src="img/logo.png" alt="Stacy's Time Tracker"></h1>
   <div class="sub" id="splashSub">Loading…</div>
 </div>
 
@@ -210,17 +226,19 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
     <div class="datecard">
       <button id="prevDay" aria-label="Previous day">‹</button>
       <div class="mid">
+        <div class="greet" id="greet"></div>
         <div class="dow" id="dDow"></div>
         <div class="dl" id="dLong"></div>
         <div class="dp" id="dPer"></div>
+        <div class="payday"><div class="lbl2" id="payLbl"></div><div class="bar"><i id="payBar"></i></div></div>
       </div>
       <button id="nextDay" aria-label="Next day">›</button>
     </div>
     <div style="text-align:center;margin:-4px 0 12px"><button class="chip" id="goToday" style="display:none">↩ Back to today</button></div>
 
     <div class="card">
-      <h3>Quick entry</h3>
-      <button class="big" id="fullShift">✓ Worked my normal shift</button>
+      <h3 class="h3i"><img class="tick" src="img/stopwatch.png" alt="">Quick entry</h3>
+      <button class="big shine" id="fullShift">✓ Worked my normal shift</button>
       <div class="muted" style="margin-top:10px">…or enter clock times:</div>
       <div class="row2" style="margin-top:8px">
         <div class="f">Start<div class="dclock" id="tStart"></div></div>
@@ -264,7 +282,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
   <section class="view" id="v-sheet">
     <div class="pernav">
       <button id="prevPer" aria-label="Previous period">‹</button>
-      <div class="mid"><b id="perTitle"></b><div class="muted" id="perRange"></div></div>
+      <div class="mid"><img src="img/clipboard.png" alt="" style="height:54px;display:block;margin:0 auto 4px;filter:drop-shadow(0 3px 4px rgba(60,30,10,.25))"><b id="perTitle"></b><div class="muted" id="perRange"></div></div>
       <button id="nextPer" aria-label="Next period">›</button>
     </div>
     <div class="kpis">
@@ -279,7 +297,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
         <tfoot id="sheetFoot"></tfoot>
       </table>
     </div>
-    <div class="card pay"><h3>Hours × Rate</h3><div id="payCalc"></div></div>
+    <div class="card pay"><h3 class="h3i"><img src="img/coins.png" alt="">Hours × Rate</h3><div id="payCalc"></div></div>
     <div class="btnrow" style="margin-bottom:8px">
       <button class="primary" id="printBtn">🖨 Print / PDF</button>
       <button class="ghost" id="csvBtn">Export CSV</button>
@@ -402,7 +420,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.5.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.6.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -479,6 +497,11 @@ function renderToday(){
   $('#dLong').textContent = MON[cur.getMonth()] + ' ' + cur.getDate() + ', ' + cur.getFullYear();
   const idx = daysIn(p).findIndex(d => sameDay(d, cur)) + 1;
   $('#dPer').textContent = 'Pay period ' + shortDate(p.start) + ' – ' + shortDate(p.end) + ' · day ' + idx + ' of ' + daysIn(p).length;
+  const nm = (profile.name || 'Stacy').split(' ')[0], hr = new Date().getHours();
+  $('#greet').textContent = (hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + ', ' + nm + '!';
+  const pt = periodOf(t), left = Math.round((pt.end - t) / 864e5) + 1, all = daysIn(pt).length;
+  $('#payLbl').textContent = left <= 1 ? '💰 Last day of the pay period!' : '💰 ' + left + ' days left in this pay period';
+  $('#payBar').style.width = Math.round((all - left + 1) / all * 100) + '%';
   $('#goToday').style.display = sameDay(cur, t) ? 'none' : 'inline-block';
   $('#fullShift').textContent = '✓ Worked my normal shift (' + fmtH(profile.shiftMin) + ')';
   $('#shiftNote').textContent = 'Up to your ' + fmtH(profile.shiftMin) + ' shift';
@@ -513,11 +536,33 @@ function fromTimes(){
   setTotal(mins - draft.brk);
 }
 /* total hours worked → first part is Regular (up to the shift), the rest is Extra */
+const CHEERS = ['Case closed! 🔍', 'Nailed it! 🎉', 'Clocked and locked 🔒', 'Another one in the books 📚', 'Look at you go! ⭐', 'Time well spent ⏱️', 'Boom, logged! 💥'];
+let celebT;
+function celebrate(msg){
+  clearTimeout(celebT);
+  celebT = setTimeout(() => { toast(msg || CHEERS[Math.floor(Math.random() * CHEERS.length)]); confetti(); try{ navigator.vibrate && navigator.vibrate(25); }catch(e){} }, 600);
+}
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = $('#confetti'), x = c.getContext('2d'), W = c.width = innerWidth, H = c.height = innerHeight;
+  const cols = ['#ffd166', '#f4a261', '#7b4bd6', '#2e8b57', '#e76f51', '#fff3c4'];
+  const ps = Array.from({length:120}, () => ({x:W/2 + (Math.random()-.5)*60, y:H*0.35, vx:(Math.random()-.5)*11, vy:-Math.random()*11-4, r:Math.random()*6+4, a:Math.random()*6, va:(Math.random()-.5)*.4, c:cols[Math.floor(Math.random()*cols.length)]}));
+  let f = 0;
+  (function draw(){
+    x.clearRect(0, 0, W, H);
+    ps.forEach(p => { p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va;
+      x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; x.globalAlpha = Math.max(0, 1 - f/110); x.fillRect(-p.r/2, -p.r/4, p.r, p.r/2); x.restore(); });
+    if(++f < 110) requestAnimationFrame(draw); else x.clearRect(0, 0, W, H);
+  })();
+}
 function setTotal(m){
   m = Math.max(0, Math.min(1440, Math.round(m)));
+  const before = draft.reg + draft.extra;
+  if(!before && m) celebrate();
   draft.reg = Math.min(m, profile.shiftMin);
   draft.extra = Math.max(0, m - profile.shiftMin);
   changed();
+  if(m !== before){ const v = $('#tTot'); v.classList.remove('pop'); void v.offsetWidth; v.classList.add('pop'); }
 }
 function step(f, d){
   if(f === 'brk'){ draft.brk = Math.max(0, draft.brk + d); fromTimes(); changed(); return; }
@@ -561,7 +606,7 @@ buildClock('#tStart', v => { draft.start = v; fromTimes(); save(); });
 buildClock('#tEnd', v => { draft.end = v; fromTimes(); save(); });
 $('#note').oninput = e => { draft.note = e.target.value; paintNumbers(); save(true); };
 $('#note').onblur = () => save();
-$('#fullShift').onclick = () => { draft.reg = profile.shiftMin; draft.extra = 0; changed(); toast('Logged ' + fmtH(profile.shiftMin) + ' regular'); };
+$('#fullShift').onclick = () => { draft.reg = profile.shiftMin; draft.extra = 0; changed(); celebrate('Logged ' + fmtH(profile.shiftMin) + ' — ' + CHEERS[Math.floor(Math.random() * CHEERS.length)]); };
 $('#clearDay').onclick = () => ask('Clear all time for ' + shortDate(cur) + '?', () => { draft = blankEntry(); save(); renderToday(); toast('Day cleared'); });
 function goDay(d){ save(true); cur = d; draft = getEntry(keyOf(cur)); renderToday(); }
 $('#prevDay').onclick = () => goDay(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()-1));
@@ -755,5 +800,6 @@ if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js')
 })();
 $('#splash').onclick = () => $('#splash').classList.add('hide');
 </script>
+<canvas id="confetti"></canvas>
 </body>
 </html>

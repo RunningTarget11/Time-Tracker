@@ -1,7 +1,17 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.6.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "New 3D graphics made in Blender: gold stopwatch, gold logo, clipboard and coins",
+        "Splash screen has the 3D logo and a swinging stopwatch",
+        "Confetti and a cheer when you log a day",
+        "Greeting and a pay-period countdown bar on the Today screen"
+      ]
+    },
     {
       "version": "1.5.0",
       "date": "Nov 17, 2026",

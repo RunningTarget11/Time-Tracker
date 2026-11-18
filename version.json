@@ -1,7 +1,14 @@
 {
-  "version": "2.0.3",
+  "version": "2.0.4",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "2.0.4",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Removed budget codes from Profile and the printed timesheet"
+      ]
+    },
     {
       "version": "2.0.3",
       "date": "Nov 17, 2026",

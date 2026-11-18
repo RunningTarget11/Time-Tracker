@@ -329,12 +329,6 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
       </div>
       <p class="muted" style="margin:8px 0 0">Leave Extra blank to pay extra hours at the regular rate.</p>
     </div>
-    <div class="card">
-      <h3>Budget codes</h3>
-      <label class="f">Budget code 1<input id="b0"></label>
-      <label class="f" style="margin-top:8px">Budget code 2<input id="b1"></label>
-      <label class="f" style="margin-top:8px">Budget code 3<input id="b2"></label>
-    </div>
     <p class="muted" style="text-align:center">Changes save automatically.</p>
   </section>
 
@@ -410,7 +404,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.0.4';
 document.getElementById('splashVer').textContent = 'Version ' + APP_VERSION;   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
@@ -648,7 +642,7 @@ function buildPrint(p, tot, rows, lines, pay){
   ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td></tr>`).join('')}
   <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td></tr></table>
   <div class="foot"><div class="calc">${L.map(l => l ? `<div>${dec(l.min)} Hours (${l.n}) × ${money(l.rate)} Rate = ${money(l.amt)}</div>` : '<div>_____ Hours × _____ Rate = _____</div>').join('')}<div><b>TOTAL ${money(pay)}</b></div></div>
-  <div>${profile.budget.map(b => `<div class="sig" style="margin-top:12px">${esc(b) || '&nbsp;'}<br>Budget Code (MUST BE COMPLETED)</div>`).join('')}</div>
+  <div></div>
   <div class="sig">Employee's Signature</div><div class="sig">Supervisor's Signature - Site Approval</div>
   <div class="sig">${esc(profile.empId) || '&nbsp;'}<br>Employee ID # (located on check stubs)</div><div class="sig">Administrative Approval - District Office Approval</div></div>`;
 }
@@ -680,7 +674,6 @@ function fillProfile(){
   $('#pStart').value = profile.periodStart; $('#pFmt').value = profile.fmt;
   [['pName','name'],['pOffice','office'],['pPosition','position'],['pEmpId','empId']].forEach(([id, f]) => $('#' + id).value = profile[f]);
   [['rReg','reg'],['rOt15','ot15']].forEach(([id, f]) => $('#' + id).value = profile.rates[f]);
-  profile.budget.forEach((b, i) => $('#b' + i).value = b);
 }
 function saveProfile(){
   const sm = (+$('#pShiftH').value) * 60 + (+$('#pShiftM').value);
@@ -688,7 +681,6 @@ function saveProfile(){
   profile.shiftMin = sm; profile.periodStart = +$('#pStart').value; profile.fmt = $('#pFmt').value;
   [['pName','name'],['pOffice','office'],['pPosition','position'],['pEmpId','empId']].forEach(([id, f]) => profile[f] = $('#' + id).value.trim());
   [['rReg','reg'],['rOt15','ot15']].forEach(([id, f]) => profile.rates[f] = $('#' + id).value);
-  profile.budget = [0,1,2].map(i => $('#b' + i).value.trim());
   store.set('tt_profile', profile);
   if(isEmpty(draft)) draft.extraCat = profile.extraCat;
 }

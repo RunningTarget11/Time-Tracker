@@ -94,6 +94,9 @@ nav.tabs button.on{color:var(--brand);font-weight:700}
 .totrow .dclock b{font-size:1.6rem}
 .autoval{min-width:80px;text-align:right;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums;padding-right:8px}
 .autoval.x{color:var(--extra)}
+.clockres{display:none;margin-top:10px;background:#f8f3ec;border-radius:10px;padding:10px 12px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.clockres.show{display:block}
+.clockres .x{color:var(--extra)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label.f{display:block;font-size:.82rem;color:var(--muted)}
 label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;font-size:1rem;color:var(--ink)}
@@ -244,6 +247,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
         <div class="f">Start<div class="dclock" id="tStart"></div></div>
         <div class="f">End<div class="dclock" id="tEnd"></div></div>
       </div>
+      <div class="clockres" id="clockRes"></div>
     </div>
 
     <div class="card">
@@ -408,7 +412,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.9.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.9.1';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -501,6 +505,9 @@ function paintNumbers(){
   const tot = draft.reg + draft.extra;
   $('#tTot .th').value = String(Math.min(24, Math.floor(tot / 60))); $('#tTot .tm').value = String(tot % 60);
   $('#vReg').textContent = fmtH(draft.reg); $('#vExtra').textContent = fmtH(draft.extra);
+  const cr = $('#clockRes'), both = draft.start && draft.end;
+  cr.classList.toggle('show', !!both);
+  if(both) cr.innerHTML = 'Worked ' + fmtH(tot) + ' = ' + fmtH(draft.reg) + ' regular' + (draft.extra ? ' + <span class="x">' + fmtH(draft.extra) + ' extra</span>' : '');
   $('#dayTotal').textContent = fmtH(draft.reg + draft.extra);
 }
 let saveT;
@@ -572,7 +579,14 @@ function buildClock(sel, onSet){
     if(h === ''){ el.classList.add('empty'); return onSet(''); }
     if(m.value === '') m.value = '0';
     el.classList.remove('empty');
-    const h24 = (+h % 12) + (el.querySelector('.ap').value === 'PM' ? 12 : 0);
+    const ap = el.querySelector('.ap'), other = sel === '#tStart' ? draft.end : draft.start;
+    if(x !== ap && other){
+      // pick AM or PM so the shift reads forward and shortest (e.g. 8 AM → 1 = 1 PM, not 1 AM)
+      const [oh, om] = other.split(':').map(Number), o = oh * 60 + om, base = (+h % 12) * 60 + +m.value;
+      const span = t => sel === '#tStart' ? (o - t + 1440) % 1440 : (t - o + 1440) % 1440;
+      ap.value = span(base + 720) < span(base) ? 'PM' : 'AM';
+    }
+    const h24 = (+h % 12) + (ap.value === 'PM' ? 12 : 0);
     onSet(pad(h24) + ':' + pad(+m.value));
   });
 }

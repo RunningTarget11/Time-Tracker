@@ -1,7 +1,15 @@
 {
-  "version": "1.9.0",
+  "version": "1.9.1",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.9.1",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Clock times pick AM/PM automatically (8 AM to 1 = 1 PM)",
+        "Regular and Extra time show right under the clock times"
+      ]
+    },
     {
       "version": "1.9.0",
       "date": "Nov 17, 2026",

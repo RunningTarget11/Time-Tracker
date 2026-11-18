@@ -1,7 +1,15 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.3.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Removed Uniform hourly and Sick/Holiday from the day screen, timesheet, print and CSV",
+        "Shift is 3.8 hours (3:48); anything over it goes to Extra hours automatically"
+      ]
+    },
     {
       "version": "1.2.0",
       "date": "Nov 17, 2026",

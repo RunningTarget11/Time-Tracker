@@ -63,6 +63,12 @@ nav.tabs button.on{color:var(--brand);font-weight:700}
 .datecard button:active{background:rgba(255,255,255,.15)}
 .chip{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.85rem}
 .todaytag{background:#ffd166;color:#3a2616;border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:700;margin-left:6px}
+.dclock{display:flex;align-items:center;gap:2px;margin-top:4px;background:#2a1d13;border-radius:10px;padding:6px 6px}
+.dclock select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:#ffd166;font:700 1.25rem/1.2 ui-monospace,'Roboto Mono',Menlo,monospace;font-variant-numeric:tabular-nums;padding:4px 2px;text-align:center;text-align-last:center;min-width:0;flex:1}
+.dclock select.ap{font-size:.95rem;flex:.9}
+.dclock select option{color:#000;background:#fff}
+.dclock b{color:#ffd166;font:700 1.25rem monospace}
+.dclock.empty select{color:#8a7563}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label.f{display:block;font-size:.82rem;color:var(--muted)}
 label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;font-size:1rem;color:var(--ink)}
@@ -105,9 +111,10 @@ textarea.bad{border-color:var(--warn)!important;background:#fff6f3!important}
 .kpi.x b{color:var(--extra)}
 .tablewrap{overflow-x:auto;background:#fff;border-radius:var(--radius);box-shadow:0 1px 3px rgba(60,30,10,.08);margin-bottom:12px}
 table.sheet{border-collapse:collapse;width:100%;font-size:.86rem;font-variant-numeric:tabular-nums}
-table.sheet th{position:sticky;top:0;background:#3a2616;color:#fff;font-weight:600;padding:8px 6px;font-size:.74rem;white-space:nowrap}
-table.sheet td{padding:8px 6px;border-top:1px solid var(--line);text-align:center;white-space:nowrap}
-table.sheet td.ex{text-align:left;white-space:normal;min-width:140px;color:var(--muted);font-size:.8rem}
+table.sheet th{position:sticky;top:0;background:#3a2616;color:#fff;font-weight:600;padding:8px 4px;font-size:.72rem;line-height:1.15}
+table.sheet td{padding:8px 4px;border-top:1px solid var(--line);text-align:center;white-space:nowrap}
+table.sheet td.ex{text-align:left;white-space:normal;color:var(--muted);font-size:.8rem;padding:0 8px 8px 30px}
+table.sheet tr.exrow td{border-top:0}
 table.sheet td.d{font-weight:700;text-align:left}
 table.sheet td.d small{color:var(--muted);font-weight:400;margin-left:3px}
 table.sheet tr.today td{background:#fff4d6}
@@ -207,8 +214,8 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
       <button class="big" id="fullShift">✓ Worked my normal shift</button>
       <div class="muted" style="margin-top:10px">…or enter clock times (rounded to 6 minutes):</div>
       <div class="row2" style="margin-top:8px">
-        <label class="f">Start<input type="time" id="tStart" step="360"></label>
-        <label class="f">End<input type="time" id="tEnd" step="360"></label>
+        <div class="f">Start<div class="dclock" id="tStart"></div></div>
+        <div class="f">End<div class="dclock" id="tEnd"></div></div>
       </div>
       <div class="line" style="border-top:0;padding-bottom:0">
         <div class="lbl">Unpaid lunch / break</div>
@@ -266,7 +273,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
     </div>
     <div class="tablewrap">
       <table class="sheet">
-        <thead><tr><th>Date</th><th>Reg.</th><th>OT 1.5</th><th>OT 2.0</th><th>Uniform</th><th>Sick/Hol</th><th>Explanation</th></tr></thead>
+        <thead><tr><th>Date</th><th>Reg.</th><th>OT 1.5</th><th>OT 2.0</th><th>Uniform</th><th>Sick/<br>Hol</th></tr></thead>
         <tbody id="sheetBody"></tbody>
         <tfoot id="sheetFoot"></tfoot>
       </table>
@@ -396,7 +403,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.1.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.2.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -477,7 +484,7 @@ function renderToday(){
   $('#goToday').style.display = sameDay(cur, t) ? 'none' : 'inline-block';
   $('#fullShift').textContent = '✓ Worked my normal shift (' + fmtH(profile.shiftMin) + ')';
   $('#shiftNote').textContent = 'Up to your ' + fmtH(profile.shiftMin) + ' shift';
-  $('#tStart').value = draft.start; $('#tEnd').value = draft.end;
+  setClock('#tStart', draft.start); setClock('#tEnd', draft.end);
   $('#note').value = draft.note; $('#leaveType').value = draft.leaveType;
   paintNumbers();
 }
@@ -522,8 +529,30 @@ $$('#v-today .stepper button').forEach(b => {
   ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, stop));
 });
 $$('#xcat button').forEach(b => b.onclick = () => { draft.extraCat = b.dataset.c; changed(); });
-$('#tStart').onchange = e => { draft.start = e.target.value; fromTimes(); save(); };
-$('#tEnd').onchange = e => { draft.end = e.target.value; fromTimes(); save(); };
+/* digital clock pickers: hour : minute (6-min steps) AM/PM, value stored as 24h "HH:MM" */
+function buildClock(sel, onSet){
+  const el = $(sel);
+  el.innerHTML = '<select class="h" aria-label="Hour"><option value="">--</option>' + Array.from({length:12}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('') + '</select><b>:</b>'
+    + '<select class="m" aria-label="Minute"><option value="">--</option>' + Array.from({length:60/STEP}, (_, i) => `<option value="${i*STEP}">${pad(i*STEP)}</option>`).join('') + '</select>'
+    + '<select class="ap" aria-label="AM or PM"><option>AM</option><option>PM</option></select>';
+  el.querySelectorAll('select').forEach(x => x.onchange = () => {
+    const h = el.querySelector('.h').value, m = el.querySelector('.m');
+    if(h === ''){ el.classList.add('empty'); return onSet(''); }
+    if(m.value === '') m.value = '0';
+    el.classList.remove('empty');
+    const h24 = (+h % 12) + (el.querySelector('.ap').value === 'PM' ? 12 : 0);
+    onSet(pad(h24) + ':' + pad(+m.value));
+  });
+}
+function setClock(sel, v){
+  const el = $(sel), [h, m] = v ? v.split(':').map(Number) : [null, null];
+  el.classList.toggle('empty', !v);
+  el.querySelector('.h').value = v ? String(h % 12 || 12) : '';
+  el.querySelector('.m').value = v ? String(Math.min(54, r6(m))) : '';
+  el.querySelector('.ap').value = v && h >= 12 ? 'PM' : 'AM';
+}
+buildClock('#tStart', v => { draft.start = v; fromTimes(); save(); });
+buildClock('#tEnd', v => { draft.end = v; fromTimes(); save(); });
 $('#note').oninput = e => { draft.note = e.target.value; paintNumbers(); save(true); };
 $('#note').onblur = () => save();
 $('#leaveType').onchange = e => { draft.leaveType = e.target.value; save(); };
@@ -565,9 +594,9 @@ function renderSheet(){
     const ex = e ? (e.note.trim() ? esc(e.note) : (e.extra ? '⚠ explanation needed' : '')) + (e.leave && e.leaveType ? ' <i>(' + e.leaveType + ')</i>' : '') : '';
     return `<tr class="${cls}" data-k="${k}"><td class="d">${d.getDate()}<small>${DOW[d.getDay()].slice(0,2)}</small></td>
       <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot20, 1) : ''}</td>
-      <td>${c ? fmtH(c.uni, 1) : ''}</td><td>${c ? fmtH(c.leave, 1) : ''}</td><td class="ex">${ex}</td></tr>`;
+      <td>${c ? fmtH(c.uni, 1) : ''}</td><td>${c ? fmtH(c.leave, 1) : ''}</td></tr>` + (ex ? `<tr class="${cls} exrow" data-k="${k}"><td class="ex" colspan="6">${ex}</td></tr>` : '');
   }).join('');
-  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td><td class="xcol">${fmtH(tot.ot20)}</td><td>${fmtH(tot.uni)}</td><td>${fmtH(tot.leave)}</td><td></td></tr>`;
+  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td><td class="xcol">${fmtH(tot.ot20)}</td><td>${fmtH(tot.uni)}</td><td>${fmtH(tot.leave)}</td></tr>`;
   $$('#sheetBody tr').forEach(tr => tr.onclick = () => { const [y, m, d] = tr.dataset.k.split('-').map(Number); cur = new Date(y, m-1, d); draft = getEntry(tr.dataset.k); show('today'); });
   $('#payCalc').innerHTML = lines.length
     ? lines.map(l => `<div class="pl"><span>${l.n}: ${dec(l.min)} hrs × ${l.rate ? money(l.rate) : '<i>no rate</i>'}</span><b>${money(l.amt)}</b></div>`).join('') + `<div class="pl tot"><span>TOTAL</span><span>${money(pay)}</span></div>`

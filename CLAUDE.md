@@ -8,3 +8,4 @@ https://runningtarget11.github.io/time-tracker/
 - Never change localStorage keys (`tt_profile`, `tt_entries`, `tt_settings`) without a migration — users' time entries live there.
 - Time is stored in minutes, in 1-minute steps since v1.4.0 (`STEP` in index.html). Default shift is 228 min (3.8 hr); time over the shift goes to Extra hours.
 - 3D graphics in `img/` are rendered with Blender: `pip install bpy`, then `python3 source/blender/render_assets.py [stopwatch|logo|clipboard|coins]` (renders are auto-cropped and resized afterwards).
+- Clock times are typed (`buildClock`): "830" = 8:30, "1245" = 12:45, AM/PM button. Days under the shift count as short (red, minus); timesheet Extra total = extra − short. Pay still uses actual hours.

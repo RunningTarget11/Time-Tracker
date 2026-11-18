@@ -1,7 +1,16 @@
 {
-  "version": "2.1.0",
+  "version": "2.2.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "2.2.0",
+      "date": "Nov 18, 2026",
+      "notes": [
+        "Type clock times: 830 = 8:30, 1245 = 12:45; tap AM/PM to switch",
+        "Short days show in red as minus time (e.g. \u22120:18)",
+        "Timesheet total is extra time minus short time"
+      ]
+    },
     {
       "version": "2.1.0",
       "date": "Nov 17, 2026",

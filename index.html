@@ -85,6 +85,16 @@ nav.tabs button.on{color:var(--brand);font-weight:700}
 .datecard button:active{background:rgba(255,255,255,.15)}
 .chip{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.85rem}
 .todaytag{background:#ffd166;color:#3a2616;border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:700;margin-left:6px}
+.tclock{display:flex;align-items:center;gap:6px;margin-top:4px;background:#2a1d13;border-radius:10px;padding:4px 6px 4px 4px}
+.tclock input{flex:1;min-width:0;width:100%;background:transparent;border:0;outline:0;color:#ffd166;font:700 1.45rem/1.2 ui-monospace,'Roboto Mono',Menlo,monospace;font-variant-numeric:tabular-nums;text-align:center;padding:6px 2px;caret-color:#ffd166}
+.tclock input::placeholder{color:#8a7563}
+.tclock:focus-within{box-shadow:0 0 0 3px rgba(255,209,102,.55)}
+.tclock .ap{background:#4a3424;color:#ffd166;border:0;border-radius:8px;font:800 .9rem ui-monospace,monospace;padding:9px 8px;min-width:46px}
+.tclock.bad{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.short{color:#c0392b !important}
+table.sheet tr.netrow td{font-size:.8rem;color:var(--muted);text-align:center;font-weight:600;padding:6px}
+.xc{color:var(--extra)}
 .dclock{display:flex;align-items:center;gap:2px;margin-top:4px;background:#2a1d13;border-radius:10px;padding:6px 6px}
 .dclock select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:#ffd166;font:700 1.25rem/1.2 ui-monospace,'Roboto Mono',Menlo,monospace;font-variant-numeric:tabular-nums;padding:4px 2px;text-align:center;text-align-last:center;min-width:0;flex:1}
 .dclock select.ap{font-size:.95rem;flex:.9}
@@ -247,8 +257,8 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
     <div class="card">
       <h3 class="h3i"><img class="tick" src="img/stopwatch.png" alt="">Clock in &amp; out</h3>
       <div class="row2" style="margin-top:8px">
-        <div class="f">Start<div class="dclock" id="tStart"></div></div>
-        <div class="f">End<div class="dclock" id="tEnd"></div></div>
+        <div class="f">Start<div class="tclock" id="tStart"></div></div>
+        <div class="f">End<div class="tclock" id="tEnd"></div></div>
       </div>
     </div>
 
@@ -259,7 +269,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
         <div class="autoval" id="vReg"></div>
       </div>
       <div class="line extra">
-        <div class="lbl">Extra hours<small>Time over your shift</small>
+        <div class="lbl">Extra hours<small id="xLbl">Time over your shift</small>
         </div>
         <div class="autoval x" id="vExtra"></div>
       </div>
@@ -410,7 +420,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 document.getElementById('splashVer').textContent = 'Version ' + APP_VERSION;   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
@@ -454,7 +464,11 @@ const shortDate = d => MON[d.getMonth()].slice(0,3) + ' ' + d.getDate();
 
 function blankEntry(){ return {reg:0,extra:0,extraCat:profile.extraCat,uni:0,leave:0,leaveType:'',start:'',end:'',brk:0,note:''}; }
 function getEntry(k){ return Object.assign(blankEntry(), entries[k] || {}); }
-function cols(e){ return {reg:e.reg||0, ot15:e.extra||0, ot20:0, uni:e.uni||0, leave:e.leave||0}; }
+function cols(e){ const w = (e.reg||0) + (e.extra||0); return {reg:e.reg||0, ot15:e.extra||0, ot20:0, uni:e.uni||0, leave:e.leave||0, short: w && w < profile.shiftMin ? profile.shiftMin - w : 0}; }
+/* signed hours: +0:22 / −0:18 */
+const fmtS = min => !min ? fmtH(0) : (min < 0 ? '−' : '+') + fmtH(Math.abs(min));
+const xCell = c => !c ? '' : c.ot15 ? fmtH(c.ot15) : c.short ? '<span class="short">−' + fmtH(c.short) + '</span>' : '';
+const decS = min => !min ? '' : (min < 0 ? '-' : '') + (Math.abs(min)/60).toFixed(2);
 const isEmpty = e => !e.reg && !e.extra && !e.uni && !e.leave && !(e.note||'').trim() && !e.start && !e.end;
 
 /* ---------- Toast / modal ---------- */
@@ -501,7 +515,10 @@ function renderToday(){
 function paintNumbers(){
   $$('#v-today .stepper .val').forEach(v => v.textContent = fmtH(draft[v.parentNode.dataset.f]));
   const tot = draft.reg + draft.extra;
-  $('#vReg').textContent = fmtH(draft.reg); $('#vExtra').textContent = fmtH(draft.extra);
+  $('#vReg').textContent = fmtH(draft.reg);
+  const sh = tot && tot < profile.shiftMin ? profile.shiftMin - tot : 0;
+  $('#vExtra').innerHTML = sh ? '<span class="short">−' + fmtH(sh) + '</span>' : fmtH(draft.extra);
+  $('#xLbl').textContent = sh ? 'Short of your shift' : 'Time over your shift';
   $('#dayTotal').textContent = fmtH(draft.reg + draft.extra);
 }
 let saveT;
@@ -559,33 +576,45 @@ $$('#v-today .stepper button').forEach(b => {
   ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, stop));
 });
 /* digital clock pickers: hour : minute (6-min steps) AM/PM, value stored as 24h "HH:MM" */
+/* typed clock: "830" → 8:30, "1245" → 12:45, "8" → 8:00; AM/PM button; value stored as 24h "HH:MM" */
 function buildClock(sel, onSet){
   const el = $(sel);
-  el.innerHTML = '<select class="h" aria-label="Hour"><option value="">--</option>' + Array.from({length:12}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('') + '</select><b>:</b>'
-    + '<select class="m" aria-label="Minute"><option value="">--</option>' + Array.from({length:60/STEP}, (_, i) => `<option value="${i*STEP}">${pad(i*STEP)}</option>`).join('') + '</select>'
-    + '<select class="ap" aria-label="AM or PM"><option>AM</option><option>PM</option></select>';
-  el.querySelectorAll('select').forEach(x => x.onchange = () => {
-    const h = el.querySelector('.h').value, m = el.querySelector('.m');
-    if(h === ''){ el.classList.add('empty'); return onSet(''); }
-    if(m.value === '') m.value = '0';
-    el.classList.remove('empty');
-    const ap = el.querySelector('.ap'), other = sel === '#tStart' ? draft.end : draft.start;
-    if(x !== ap && other){
+  el.innerHTML = '<input type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="--:--" aria-label="Time"><button type="button" class="ap" aria-label="AM or PM">AM</button>';
+  const inp = el.querySelector('input'), ap = el.querySelector('.ap');
+  const digits = () => inp.value.replace(/\D/g, '').slice(0, 4);
+  inp.oninput = () => {
+    const d = digits();
+    inp.value = d.length >= 3 ? d.slice(0, d.length - 2) + ':' + d.slice(-2) : d;
+    if(d.length === 4 || (d.length === 3 && +d[0] > 1)) commit(true);
+  };
+  inp.onfocus = () => { inp.dataset.old = inp.value; inp.placeholder = inp.value || '--:--'; inp.value = ''; };
+  inp.onkeydown = e => { if(e.key === 'Enter'){ e.preventDefault(); inp.blur(); } };
+  inp.onblur = () => { inp.placeholder = '--:--'; if(!digits() && inp.dataset.old){ inp.value = inp.dataset.old; inp.dataset.old = ''; return; } inp.dataset.old = ''; commit(true); };
+  ap.onclick = () => { if(!digits()) return; ap.textContent = ap.textContent === 'AM' ? 'PM' : 'AM'; commit(false); };
+  function commit(guessAP){
+    const d = digits();
+    if(!d){ el.dataset.v = ''; return onSet(''); }
+    let h = d.length <= 2 ? +d : +d.slice(0, d.length - 2), m = d.length <= 2 ? 0 : +d.slice(-2);
+    if(h > 23 || m > 59 || (h === 0 && d.length <= 2)){ el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); toast('Type a time like 830 or 1245'); return; }
+    if(h > 12 || h === 0){ ap.textContent = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; guessAP = false; }
+    const other = sel === '#tStart' ? draft.end : draft.start;
+    if(guessAP && other){
       // pick AM or PM so the shift reads forward and shortest (e.g. 8 AM → 1 = 1 PM, not 1 AM)
-      const [oh, om] = other.split(':').map(Number), o = oh * 60 + om, base = (+h % 12) * 60 + +m.value;
+      const [oh, om] = other.split(':').map(Number), o = oh * 60 + om, base = (h % 12) * 60 + m;
       const span = t => sel === '#tStart' ? (o - t + 1440) % 1440 : (t - o + 1440) % 1440;
-      ap.value = span(base + 720) < span(base) ? 'PM' : 'AM';
+      ap.textContent = span(base + 720) < span(base) ? 'PM' : 'AM';
     }
-    const h24 = (+h % 12) + (ap.value === 'PM' ? 12 : 0);
-    onSet(pad(h24) + ':' + pad(+m.value));
-  });
+    const v = pad((h % 12) + (ap.textContent === 'PM' ? 12 : 0)) + ':' + pad(m);
+    if(document.activeElement !== inp) inp.value = h + ':' + pad(m);
+    if(el.dataset.v === v) return;
+    el.dataset.v = v; onSet(v);
+  }
 }
 function setClock(sel, v){
-  const el = $(sel), [h, m] = v ? v.split(':').map(Number) : [null, null];
-  el.classList.toggle('empty', !v);
-  el.querySelector('.h').value = v ? String(h % 12 || 12) : '';
-  el.querySelector('.m').value = v ? String(m) : '';
-  el.querySelector('.ap').value = v && h >= 12 ? 'PM' : 'AM';
+  const el = $(sel), inp = el.querySelector('input'), [h, m] = v ? v.split(':').map(Number) : [0, 0];
+  el.dataset.v = v || '';
+  inp.value = v ? (h % 12 || 12) + ':' + pad(m) : '';
+  el.querySelector('.ap').textContent = v && h >= 12 ? 'PM' : 'AM';
 }
 buildClock('#tStart', v => { draft.start = v; fromTimes(); save(); });
 buildClock('#tEnd', v => { draft.end = v; fromTimes(); save(); });
@@ -607,7 +636,7 @@ function rateOf(c){
 }
 const CAT = [['reg','Regular'],['ot15','Extra hours']];
 function periodData(p){
-  const tot = {reg:0,ot15:0,ot20:0,uni:0,leave:0}, rows = [];
+  const tot = {reg:0,ot15:0,ot20:0,uni:0,leave:0,short:0}, rows = [];
   daysIn(p).forEach(d => { const k = keyOf(d), e = entries[k] ? getEntry(k) : null, c = e ? cols(e) : null;
     if(c) for(const x in tot) tot[x] += c[x];
     rows.push({d, k, e, c}); });
@@ -619,14 +648,16 @@ function renderSheet(){
   $('#perTitle').textContent = p.label;
   $('#perRange').textContent = shortDate(p.start) + ', ' + p.start.getFullYear() + ' – ' + shortDate(p.end) + ', ' + p.end.getFullYear();
   $('#kReg').textContent = fmtH(tot.reg);
-  $('#kExtra').textContent = fmtH(tot.ot15 + tot.ot20);
+  const net = tot.ot15 - tot.short;
+  $('#kExtra').innerHTML = net < 0 ? '<span class="short">' + fmtS(net) + '</span>' : fmtS(net);
   $('#kPay').textContent = pay ? '$' + Math.round(pay).toLocaleString() : '—';
   $('#sheetBody').innerHTML = rows.map(({d, k, e, c}) => {
     const cls = [sameDay(d, t) ? 'today' : '', d > t ? 'fut' : '', [0,6].includes(d.getDay()) ? 'wk' : ''].join(' ');
     return `<tr class="${cls}" data-k="${k}"><td class="d">${d.getDate()}<small>${DOW[d.getDay()].slice(0,2)}</small></td>
-      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td></tr>`;
+      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${xCell(c)}</td></tr>`;
   }).join('');
-  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td></tr>`;
+  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol${net < 0 ? ' short' : ''}">${fmtS(net)}</td></tr>`
+    + (tot.short ? `<tr class="netrow"><td colspan="3">${fmtH(tot.ot15)} extra − ${fmtH(tot.short)} short = <b class="${net < 0 ? 'short' : 'xc'}">${fmtS(net)}</b></td></tr>` : '');
   $$('#sheetBody tr').forEach(tr => tr.onclick = () => { const [y, m, d] = tr.dataset.k.split('-').map(Number); cur = new Date(y, m-1, d); draft = getEntry(tr.dataset.k); show('today'); });
   $('#payCalc').innerHTML = lines.length
     ? lines.map(l => `<div class="pl"><span>${l.n}: ${dec(l.min)} hrs × ${l.rate ? money(l.rate) : '<i>no rate</i>'}</span><b>${money(l.amt)}</b></div>`).join('') + `<div class="pl tot"><span>TOTAL</span><span>${money(pay)}</span></div>`
@@ -645,8 +676,8 @@ function buildPrint(p, tot, rows, lines, pay){
   <div>SCHOOL/OFFICE: ${esc(profile.office)}</div><div>POSITION: ${esc(profile.position)}</div></div>
   <div style="font-size:7.5pt;margin-bottom:3px">Each date during the month with time assigned must be filled in. Period ${shortDate(p.start)} – ${shortDate(p.end)}, ${p.end.getFullYear()}.</div>
   <table><tr><th>Date</th><th>Regular</th><th>Extra</th></tr>
-  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td></tr>`).join('')}
-  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td></tr></table>
+  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? (c.ot15 ? dec(c.ot15) : decS(-c.short)) : ''}</td></tr>`).join('')}
+  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${decS(tot.ot15 - tot.short) || '0.00'}</b></td></tr></table>
   <div class="foot"><div class="calc">${L.map(l => l ? `<div>${dec(l.min)} Hours (${l.n}) × ${money(l.rate)} Rate = ${money(l.amt)}</div>` : '<div>_____ Hours × _____ Rate = _____</div>').join('')}<div><b>TOTAL ${money(pay)}</b></div></div>
   <div></div>
   <div class="sig">Employee's Signature</div><div class="sig">Supervisor's Signature - Site Approval</div>
@@ -660,8 +691,8 @@ $('#printBtn').onclick = () => { renderSheet(); try{ window.print(); }catch(e){ 
 $('#csvBtn').onclick = () => {
   const p = periodOf(perRef), {tot, rows} = periodData(p), q = s => '"' + String(s).replace(/"/g, '""') + '"';
   const out = [['Date','Regular','Extra'].join(',')];
-  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? dec(c.ot15) : ''].join(',')));
-  out.push(['TOTAL', dec(tot.reg), dec(tot.ot15)].join(','));
+  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? (c.ot15 ? dec(c.ot15) : decS(-c.short)) : ''].join(',')));
+  out.push(['TOTAL', dec(tot.reg), decS(tot.ot15 - tot.short)].join(','));
   download('timesheet-' + keyOf(p.end).slice(0,7) + '.csv', out.join('\n'), 'text/csv');
 };
 $('#copyBtn').onclick = async () => {

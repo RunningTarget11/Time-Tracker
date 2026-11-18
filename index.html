@@ -29,11 +29,11 @@ button{cursor:pointer;border:0;background:none}
 #splash{position:fixed;inset:0;z-index:100;background:#1d130b url(splash.jpg) center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .6s ease}
 #splash.hide{opacity:0;pointer-events:none}
 #splash .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 28%,rgba(0,0,0,0) 55%,rgba(20,10,4,.9) 100%)}
-#splash h1{position:relative;margin:0;padding:0 20px;text-align:center;color:#fff;font-size:clamp(2rem,9vw,3.4rem);line-height:1.05;font-weight:900;letter-spacing:-.5px;
-  text-shadow:0 3px 0 #6b4423,0 6px 18px rgba(0,0,0,.7);transform:rotate(-2deg);animation:pop .7s cubic-bezier(.2,1.4,.4,1) both}
-#splash h1 span{color:#ffd166}
+#splash h1{position:relative;margin:0 auto;width:min(84vw,380px);animation:pop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 3px 0 #6b4423) drop-shadow(0 6px 14px rgba(0,0,0,.7))}
+#splash h1 svg{display:block;width:100%;height:auto;overflow:visible}
+#splash h1 text{font-family:inherit;font-weight:900}
 #splash .sub{position:relative;text-align:center;color:#f3e3cc;margin:14px 0 calc(28px + var(--safe-bot));font-size:.9rem}
-@keyframes pop{from{transform:scale(.4) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(-2deg);opacity:1}}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* Layout */
 header.top{position:sticky;top:0;z-index:10;background:var(--brand);color:#fff;padding:calc(10px + var(--safe-top)) 16px 10px;display:flex;align-items:center;gap:10px}
@@ -184,7 +184,10 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 <!-- Splash screen -->
 <div id="splash" role="img" aria-label="Stacy's Time Tracker">
   <div class="shade"></div>
-  <h1>Stacy's<br><span>Time Tracker!!</span></h1>
+  <h1><svg viewBox="0 0 300 112" aria-hidden="true">
+    <text x="150" y="44" text-anchor="middle" font-size="44" fill="#fff" textLength="292" lengthAdjust="spacing">STACY'S</text>
+    <text x="150" y="102" text-anchor="middle" font-size="50" fill="#ffd166" textLength="292" lengthAdjust="spacingAndGlyphs">Time Tracker!!</text>
+  </svg></h1>
   <div class="sub" id="splashSub">Loading…</div>
 </div>
 
@@ -389,7 +392,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.4.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.4.1';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];

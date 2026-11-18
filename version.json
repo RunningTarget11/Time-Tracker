@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "date": "2026-11-17",
+  "releases": [
+    {
+      "version": "1.0.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "First release of Stacy's Time Tracker",
+        "Opens on today's date from the phone's calendar",
+        "Shift length set once in Profile; time over the shift goes to Extra hours (1.5x or 2.0x)",
+        "All time in 10-minute increments",
+        "Pay-period timesheet (19th to 18th) with totals, Hours x Rate, print/PDF and CSV",
+        "Settings > Updates: checks for new versions on startup"
+      ]
+    }
+  ]
+}

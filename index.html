@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stacy's Time Tracker</title>
+<meta name="theme-color" content="#3a2616">
+<meta name="description" content="Daily time card with automatic pay-period totals, in 10-minute increments.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Time Tracker">
+<style>
+:root{
+  --bg:#f6f1ea; --card:#fff; --ink:#2a1d13; --muted:#7a6a5c; --line:#e6dccf;
+  --brand:#6b4423; --brand2:#a8692e; --accent:#e9a23b; --ok:#2f7d4f; --warn:#b4472c;
+  --extra:#7b4bb3; --radius:14px;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.muted{color:var(--muted);font-size:.88rem}
+
+/* Splash */
+#splash{position:fixed;inset:0;z-index:100;background:#1d130b url(splash.jpg) center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;transition:opacity .6s ease}
+#splash.hide{opacity:0;pointer-events:none}
+#splash .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 28%,rgba(0,0,0,0) 55%,rgba(20,10,4,.9) 100%)}
+#splash h1{position:relative;margin:0;padding:0 20px;text-align:center;color:#fff;font-size:clamp(2rem,9vw,3.4rem);line-height:1.05;font-weight:900;letter-spacing:-.5px;
+  text-shadow:0 3px 0 #6b4423,0 6px 18px rgba(0,0,0,.7);transform:rotate(-2deg);animation:pop .7s cubic-bezier(.2,1.4,.4,1) both}
+#splash h1 span{color:#ffd166}
+#splash .sub{position:relative;text-align:center;color:#f3e3cc;margin:14px 0 calc(28px + var(--safe-bot));font-size:.9rem}
+@keyframes pop{from{transform:scale(.4) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(-2deg);opacity:1}}
+
+/* Layout */
+header.top{position:sticky;top:0;z-index:10;background:var(--brand);color:#fff;padding:calc(10px + var(--safe-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+header.top img{width:34px;height:34px;border-radius:50%;border:2px solid #ffd166}
+header.top b{font-size:1.05rem}
+header.top .ver{margin-left:auto;font-size:.75rem;opacity:.75}
+#updBanner{display:none;background:#ffd166;color:#3a2616;padding:10px 16px;align-items:center;gap:10px;font-size:.92rem}
+#updBanner.show{display:flex}
+#updBanner button{margin-left:auto;background:#3a2616;color:#fff;padding:7px 14px;border-radius:999px;font-weight:700}
+main{padding:14px 14px calc(90px + var(--safe-bot));max-width:760px;margin:0 auto}
+section.view{display:none}
+section.view.on{display:block}
+.card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(60,30,10,.08)}
+.card h3{margin:0 0 10px;font-size:1rem}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:var(--safe-bot)}
+nav.tabs button{flex:1;padding:9px 0 8px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem;color:var(--muted)}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button.on{color:var(--brand);font-weight:700}
+
+/* Today */
+.datecard{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:var(--radius);padding:14px 8px;margin-bottom:12px}
+.datecard .mid{flex:1;text-align:center}
+.datecard .dow{font-size:.85rem;opacity:.85;text-transform:uppercase;letter-spacing:1px}
+.datecard .dl{font-size:1.35rem;font-weight:800}
+.datecard .dp{font-size:.8rem;opacity:.85}
+.datecard button{color:#fff;font-size:2rem;width:44px;height:44px;border-radius:50%}
+.datecard button:active{background:rgba(255,255,255,.15)}
+.chip{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.85rem}
+.todaytag{background:#ffd166;color:#3a2616;border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:700;margin-left:6px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{display:block;font-size:.82rem;color:var(--muted)}
+label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;font-size:1rem;color:var(--ink)}
+textarea{min-height:76px;resize:vertical}
+#note{display:block;width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;font-size:1rem}
+.big{width:100%;padding:14px;border-radius:12px;background:var(--ok);color:#fff;font-weight:800;font-size:1.02rem;margin-top:10px}
+.big:active{filter:brightness(.92)}
+.line{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.line:first-of-type{border-top:0}
+.line .lbl{flex:1}
+.line .lbl small{display:block;color:var(--muted);font-size:.78rem}
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper button{width:42px;height:42px;border-radius:50%;background:#f1e7da;font-size:1.4rem;font-weight:700;color:var(--brand);user-select:none;touch-action:manipulation}
+.stepper button:active{background:#e3d2bc}
+.stepper .val{min-width:62px;text-align:center;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums}
+.extra .val{color:var(--extra)}
+.seg{display:inline-flex;background:#f1e7da;border-radius:999px;padding:3px;margin-top:4px}
+.seg button{padding:4px 11px;border-radius:999px;font-size:.78rem;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--extra);color:#fff}
+.totalbar{display:flex;justify-content:space-between;align-items:center;background:#f8f3ec;border-radius:10px;padding:10px 12px;margin-top:8px;font-weight:700}
+.warn{display:none;color:var(--warn);font-size:.85rem;margin-top:6px;font-weight:600}
+.warn.show{display:block}
+textarea.bad{border-color:var(--warn)!important;background:#fff6f3!important}
+.saved{color:var(--ok);font-size:.82rem;font-weight:700;text-align:center;min-height:1.2em}
+.ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:600}
+.danger{color:var(--warn)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow > *{flex:1}
+.primary{background:var(--brand);color:#fff;border-radius:10px;padding:11px 14px;font-weight:700}
+
+/* Timesheet */
+.pernav{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.pernav .mid{flex:1;text-align:center}
+.pernav .mid b{font-size:1.15rem}
+.pernav button{width:44px;height:44px;border-radius:50%;background:#fff;font-size:1.6rem;color:var(--brand);box-shadow:0 1px 3px rgba(60,30,10,.1)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:#fff;border-radius:12px;padding:10px;text-align:center;box-shadow:0 1px 3px rgba(60,30,10,.08)}
+.kpi b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.kpi span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.kpi.x b{color:var(--extra)}
+.tablewrap{overflow-x:auto;background:#fff;border-radius:var(--radius);box-shadow:0 1px 3px rgba(60,30,10,.08);margin-bottom:12px}
+table.sheet{border-collapse:collapse;width:100%;font-size:.86rem;font-variant-numeric:tabular-nums}
+table.sheet th{position:sticky;top:0;background:#3a2616;color:#fff;font-weight:600;padding:8px 6px;font-size:.74rem;white-space:nowrap}
+table.sheet td{padding:8px 6px;border-top:1px solid var(--line);text-align:center;white-space:nowrap}
+table.sheet td.ex{text-align:left;white-space:normal;min-width:140px;color:var(--muted);font-size:.8rem}
+table.sheet td.d{font-weight:700;text-align:left}
+table.sheet td.d small{color:var(--muted);font-weight:400;margin-left:3px}
+table.sheet tr.today td{background:#fff4d6}
+table.sheet tr.wk td.d{color:#b9a998}
+table.sheet tr.fut td{opacity:.55}
+table.sheet tr.flag td.ex{color:var(--warn);font-weight:700}
+table.sheet tbody tr{cursor:pointer}
+table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a2616}
+.xcol{color:var(--extra)}
+.pay .pl{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px dashed var(--line);font-variant-numeric:tabular-nums;font-size:.92rem}
+.pay .pl:first-of-type{border-top:0}
+.pay .tot{font-weight:800;font-size:1.05rem;border-top:2px solid var(--ink)}
+
+/* Settings */
+.subtabs{display:flex;background:#eadfce;border-radius:12px;padding:4px;margin-bottom:12px}
+.subtabs button{flex:1;padding:9px;border-radius:9px;font-weight:700;color:var(--muted);font-size:.92rem}
+.subtabs button.on{background:#fff;color:var(--brand);box-shadow:0 1px 3px rgba(60,30,10,.12)}
+.subview{display:none}
+.subview.on{display:block}
+.kv{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+.kv:first-of-type{border-top:0}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+.switch input{width:46px;height:26px;appearance:none;background:#d9cbb8;border-radius:999px;position:relative;transition:.2s;flex:none}
+.switch input:checked{background:var(--ok)}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.switch input:checked::after{left:23px}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:700}
+.badge.ok{background:#e1f2e8;color:var(--ok)}
+.badge.new{background:#ffd166;color:#3a2616}
+.notes{margin:6px 0 0;padding-left:20px}
+.notes li{margin:3px 0}
+.rel h4{margin:12px 0 2px;font-size:.92rem}
+
+/* Toast + modal */
+#toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-bot));transform:translateX(-50%) translateY(20px);background:#2a1d13;color:#fff;padding:10px 16px;border-radius:999px;font-size:.9rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#modal{position:fixed;inset:0;background:rgba(20,10,4,.5);display:none;align-items:center;justify-content:center;z-index:70;padding:20px}
+#modal.show{display:flex}
+#modal .box{background:#fff;border-radius:16px;padding:18px;max-width:360px;width:100%}
+#modal .box p{margin:0 0 16px}
+.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Print — mirrors the paper time sheet */
+#printSheet{display:none}
+@media print{
+  @page{size:letter;margin:.4in}
+  body{background:#fff}
+  #splash,header.top,#updBanner,main,nav.tabs,#toast,#modal{display:none!important}
+  #printSheet{display:block;font:10pt Arial,Helvetica,sans-serif;color:#000}
+  #printSheet h2{text-align:center;margin:0 0 8px;font-size:12pt}
+  #printSheet .hdr{display:grid;grid-template-columns:1.4fr 1fr;gap:4px 24px;margin-bottom:6px}
+  #printSheet .hdr div{border-bottom:1px solid #000;padding:2px 0}
+  #printSheet table{border-collapse:collapse;width:100%}
+  #printSheet th,#printSheet td{border:1px solid #000;padding:1px 4px;font-size:8.5pt;height:15px}
+  #printSheet th{font-weight:600}
+  #printSheet td.n{text-align:center;width:9%}
+  #printSheet td.ex{font-size:7.5pt}
+  #printSheet .foot{display:grid;grid-template-columns:1fr 1fr;gap:10px 30px;margin-top:10px}
+  #printSheet .sig{border-top:1px solid #000;padding-top:2px;margin-top:22px;font-size:8.5pt}
+  #printSheet .calc div{margin:4px 0}
+}
+</style>
+</head>
+<body>
+
+<!-- Splash screen -->
+<div id="splash" role="img" aria-label="Stacy's Time Tracker">
+  <div class="shade"></div>
+  <h1>Stacy's<br><span>Time Tracker!!</span></h1>
+  <div class="sub" id="splashSub">Loading…</div>
+</div>
+
+<header class="top">
+  <img src="icon-192.png" alt="">
+  <b>Stacy's Time Tracker</b>
+  <span class="ver" id="hdrVer"></span>
+</header>
+<div id="updBanner"><span id="updText">A new version is available.</span><button id="updNow">Update</button></div>
+
+<main>
+  <!-- TODAY -->
+  <section class="view on" id="v-today">
+    <div class="datecard">
+      <button id="prevDay" aria-label="Previous day">‹</button>
+      <div class="mid">
+        <div class="dow" id="dDow"></div>
+        <div class="dl" id="dLong"></div>
+        <div class="dp" id="dPer"></div>
+      </div>
+      <button id="nextDay" aria-label="Next day">›</button>
+    </div>
+    <div style="text-align:center;margin:-4px 0 12px"><button class="chip" id="goToday" style="display:none">↩ Back to today</button></div>
+
+    <div class="card">
+      <h3>Quick entry</h3>
+      <button class="big" id="fullShift">✓ Worked my normal shift</button>
+      <div class="muted" style="margin-top:10px">…or enter clock times (rounded to 10 minutes):</div>
+      <div class="row2" style="margin-top:8px">
+        <label class="f">Start<input type="time" id="tStart" step="600"></label>
+        <label class="f">End<input type="time" id="tEnd" step="600"></label>
+      </div>
+      <div class="line" style="border-top:0;padding-bottom:0">
+        <div class="lbl">Unpaid lunch / break</div>
+        <div class="stepper" data-f="brk"><button data-d="-10">−</button><span class="val"></span><button data-d="10">+</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Hours for this day</h3>
+      <div class="line">
+        <div class="lbl">Regular<small id="shiftNote"></small></div>
+        <div class="stepper" data-f="reg"><button data-d="-10">−</button><span class="val"></span><button data-d="10">+</button></div>
+      </div>
+      <div class="line extra">
+        <div class="lbl">Extra hours<small>Time over your shift</small>
+          <div class="seg" id="xcat"><button data-c="ot15">1.5×</button><button data-c="ot20">2.0×</button></div>
+        </div>
+        <div class="stepper" data-f="extra"><button data-d="-10">−</button><span class="val"></span><button data-d="10">+</button></div>
+      </div>
+      <div class="line">
+        <div class="lbl">Uniform hourly</div>
+        <div class="stepper" data-f="uni"><button data-d="-10">−</button><span class="val"></span><button data-d="10">+</button></div>
+      </div>
+      <div class="line">
+        <div class="lbl">Sick / Holiday / Misc.
+          <select id="leaveType" style="display:block;margin-top:4px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fffdfa;font-size:.85rem">
+            <option value="">Type…</option><option>Sick</option><option>Holiday</option><option>Misc.</option>
+          </select>
+        </div>
+        <div class="stepper" data-f="leave"><button data-d="-10">−</button><span class="val"></span><button data-d="10">+</button></div>
+      </div>
+      <div class="totalbar"><span>Day total</span><span id="dayTotal">0:00</span></div>
+    </div>
+
+    <div class="card">
+      <h3>Explanation / duties</h3>
+      <textarea id="note" placeholder="What duties were you performing?"></textarea>
+      <div class="warn" id="noteWarn">⚠ An explanation is required when extra hours are entered.</div>
+    </div>
+    <div class="saved" id="savedMsg"></div>
+    <div class="btnrow"><button class="ghost danger" id="clearDay">Clear this day</button></div>
+  </section>
+
+  <!-- TIMESHEET -->
+  <section class="view" id="v-sheet">
+    <div class="pernav">
+      <button id="prevPer" aria-label="Previous period">‹</button>
+      <div class="mid"><b id="perTitle"></b><div class="muted" id="perRange"></div></div>
+      <button id="nextPer" aria-label="Next period">›</button>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><b id="kReg">0</b><span>Regular</span></div>
+      <div class="kpi x"><b id="kExtra">0</b><span>Extra</span></div>
+      <div class="kpi"><b id="kPay">$0</b><span>Est. pay</span></div>
+    </div>
+    <div class="tablewrap">
+      <table class="sheet">
+        <thead><tr><th>Date</th><th>Reg.</th><th>OT 1.5</th><th>OT 2.0</th><th>Uniform</th><th>Sick/Hol</th><th>Explanation</th></tr></thead>
+        <tbody id="sheetBody"></tbody>
+        <tfoot id="sheetFoot"></tfoot>
+      </table>
+    </div>
+    <div class="card pay"><h3>Hours × Rate</h3><div id="payCalc"></div></div>
+    <div class="btnrow" style="margin-bottom:8px">
+      <button class="primary" id="printBtn">🖨 Print / PDF</button>
+      <button class="ghost" id="csvBtn">Export CSV</button>
+    </div>
+    <div class="btnrow"><button class="ghost" id="copyBtn">Copy summary</button></div>
+    <p class="muted" style="text-align:center">Tap any day to edit it.</p>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="view" id="v-profile">
+    <div class="card">
+      <h3>Work shift</h3>
+      <div class="row2">
+        <label class="f">Shift hours<select id="pShiftH"></select></label>
+        <label class="f">+ Minutes<select id="pShiftM"></select></label>
+      </div>
+      <p class="muted" style="margin:8px 0 0">This stays the same every day until you change it. Anything over it is recorded as <b>Extra hours</b>.</p>
+      <label class="f" style="margin-top:10px">Extra hours go into<select id="pXcat"><option value="ot15">Overtime 1.5×</option><option value="ot20">Overtime 2.0×</option></select></label>
+    </div>
+    <div class="card">
+      <h3>Time sheet info</h3>
+      <label class="f">Name<input id="pName" autocomplete="name"></label>
+      <label class="f" style="margin-top:8px">School / Office<input id="pOffice"></label>
+      <label class="f" style="margin-top:8px">Position<input id="pPosition"></label>
+      <label class="f" style="margin-top:8px">Employee ID # <span class="muted">(on check stubs)</span><input id="pEmpId" inputmode="numeric"></label>
+    </div>
+    <div class="card">
+      <h3>Pay period</h3>
+      <label class="f">Period starts on day<select id="pStart"></select></label>
+      <p class="muted" style="margin:8px 0 0">Your paper form runs the 19th through the 18th. Choose 1 for a regular calendar month.</p>
+      <label class="f" style="margin-top:10px">Show hours as<select id="pFmt"><option value="hm">Hours:minutes (8:10)</option><option value="dec">Decimal (8.17)</option></select></label>
+    </div>
+    <div class="card">
+      <h3>Hourly rates <span class="muted">(optional, for Hours × Rate)</span></h3>
+      <div class="row2">
+        <label class="f">Regular $<input id="rReg" type="number" step="0.01" inputmode="decimal"></label>
+        <label class="f">OT 1.5 $<input id="rOt15" type="number" step="0.01" inputmode="decimal" placeholder="auto"></label>
+        <label class="f">OT 2.0 $<input id="rOt20" type="number" step="0.01" inputmode="decimal" placeholder="auto"></label>
+        <label class="f">Uniform $<input id="rUni" type="number" step="0.01" inputmode="decimal"></label>
+        <label class="f">Sick/Hol $<input id="rLeave" type="number" step="0.01" inputmode="decimal" placeholder="= regular"></label>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Leave OT blank to use regular × 1.5 or × 2.0.</p>
+    </div>
+    <div class="card">
+      <h3>Budget codes</h3>
+      <label class="f">Budget code 1<input id="b0"></label>
+      <label class="f" style="margin-top:8px">Budget code 2<input id="b1"></label>
+      <label class="f" style="margin-top:8px">Budget code 3<input id="b2"></label>
+    </div>
+    <p class="muted" style="text-align:center">Changes save automatically.</p>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="v-settings">
+    <div class="subtabs">
+      <button data-s="general" class="on">General</button>
+      <button data-s="updates">Updates <span id="updDot"></span></button>
+      <button data-s="backup">Backup</button>
+    </div>
+
+    <div class="subview on" id="s-general">
+      <div class="card">
+        <h3>Install on your phone</h3>
+        <button class="primary" id="installBtn" style="display:none;width:100%;margin-bottom:10px">📲 Install Time Tracker</button>
+        <p class="muted" style="margin:0">Android (Chrome): tap the <b>⋮</b> menu → <b>Install app</b> (or <b>Add to Home screen</b>). It then opens full-screen like a regular app and works offline.</p>
+      </div>
+      <div class="card">
+        <h3>How time is counted</h3>
+        <ul class="notes muted">
+          <li>Everything is in 10-minute increments.</li>
+          <li>The app reads today's date from your phone and opens on that day.</li>
+          <li>Time beyond your shift length (set in Profile) goes to Extra hours.</li>
+          <li>Your data stays on this phone. Use Backup to save a copy.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="subview" id="s-updates">
+      <div class="card">
+        <h3>App updates</h3>
+        <div class="kv"><span>Installed version</span><b id="uCur"></b></div>
+        <div class="kv"><span>Latest version</span><span id="uLatest">—</span></div>
+        <div class="kv"><span>Last checked</span><span id="uLast" class="muted">Never</span></div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="primary" id="uCheck">Check for updates</button>
+          <button class="primary" id="uApply" style="display:none;background:var(--ok)">Install update</button>
+        </div>
+        <label class="switch"><span>Check for updates when the app starts</span><input type="checkbox" id="uAuto"></label>
+        <p class="muted" style="margin:0">Updating never erases your time entries.</p>
+      </div>
+      <div class="card rel">
+        <h3>What's new</h3>
+        <div id="uNotes" class="muted">Check for updates to see release notes.</div>
+      </div>
+    </div>
+
+    <div class="subview" id="s-backup">
+      <div class="card">
+        <h3>Backup &amp; restore</h3>
+        <p class="muted" style="margin-top:0">Save a backup file before switching phones or clearing Chrome data.</p>
+        <div class="btnrow" style="margin-bottom:8px">
+          <button class="primary" id="bExport">Save backup</button>
+          <button class="ghost" id="bImportBtn">Restore backup</button>
+        </div>
+        <input type="file" id="bImport" accept="application/json,.json" style="display:none">
+        <button class="ghost danger" id="bErase" style="width:100%">Erase all data</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button data-v="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Today</button>
+  <button data-v="sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Timesheet</button>
+  <button data-v="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profile</button>
+  <button data-v="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings<span id="navDot"></span></button>
+</nav>
+
+<div id="toast"></div>
+<div id="modal"><div class="box"><p id="mText"></p><div class="btnrow"><button class="ghost" id="mNo">Cancel</button><button class="primary" id="mYes" style="background:var(--warn)">Yes</button></div></div></div>
+<div id="printSheet"></div>
+
+<script>
+/* ===== Stacy's Time Tracker ===== */
+const APP_VERSION = '1.0.0';   // bump this AND version.json for every release
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const DEF = {name:'',office:'',position:'',empId:'',shiftMin:480,extraCat:'ot15',periodStart:19,fmt:'hm',
+  rates:{reg:'',ot15:'',ot20:'',uni:'',leave:''},budget:['','','']};
+let profile = Object.assign({}, DEF, store.get('tt_profile', {}));
+profile.rates = Object.assign({}, DEF.rates, profile.rates || {});
+let entries = store.get('tt_entries', {});
+let settings = Object.assign({autoUpdate:true,lastCheck:null}, store.get('tt_settings', {}));
+let latest = null;
+
+const pad = n => String(n).padStart(2, '0');
+const keyOf = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+const sameDay = (a, b) => keyOf(a) === keyOf(b);
+const r10 = m => Math.round(m / 10) * 10;
+const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const money = n => '$' + n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+function fmtH(min, blank){
+  if(!min) return blank ? '' : (profile.fmt === 'dec' ? '0.00' : '0:00');
+  return profile.fmt === 'dec' ? (min/60).toFixed(2) : Math.floor(min/60) + ':' + pad(min % 60);
+}
+const dec = min => min ? (min/60).toFixed(2) : '';
+
+function periodOf(d){
+  const S = Math.min(28, Math.max(1, +profile.periodStart || 1));
+  let y = d.getFullYear(), m = d.getMonth();
+  if(S > 1 && d.getDate() < S) m--;
+  const start = new Date(y, m, S), end = new Date(y, m + 1, S - 1);
+  return {start, end, label: MON[end.getMonth()] + ' ' + end.getFullYear()};
+}
+function daysIn(p){ const out = []; for(let d = new Date(p.start); d <= p.end; d.setDate(d.getDate()+1)) out.push(new Date(d)); return out; }
+const shortDate = d => MON[d.getMonth()].slice(0,3) + ' ' + d.getDate();
+
+function blankEntry(){ return {reg:0,extra:0,extraCat:profile.extraCat,uni:0,leave:0,leaveType:'',start:'',end:'',brk:0,note:''}; }
+function getEntry(k){ return Object.assign(blankEntry(), entries[k] || {}); }
+function cols(e){ return {reg:e.reg||0, ot15:e.extraCat==='ot20'?0:(e.extra||0), ot20:e.extraCat==='ot20'?(e.extra||0):0, uni:e.uni||0, leave:e.leave||0}; }
+const isEmpty = e => !e.reg && !e.extra && !e.uni && !e.leave && !(e.note||'').trim() && !e.start && !e.end;
+
+/* ---------- Toast / modal ---------- */
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
+function ask(msg, yes){ $('#mText').textContent = msg; $('#modal').classList.add('show');
+  $('#mYes').onclick = () => { $('#modal').classList.remove('show'); yes(); };
+  $('#mNo').onclick = () => $('#modal').classList.remove('show'); }
+
+/* ---------- Navigation ---------- */
+function show(v){
+  $$('section.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  $$('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  if(v === 'sheet') renderSheet();
+  if(v === 'today') renderToday();
+  window.scrollTo(0, 0);
+}
+$$('nav.tabs button').forEach(b => b.onclick = () => show(b.dataset.v));
+$$('.subtabs button').forEach(b => b.onclick = () => {
+  $$('.subtabs button').forEach(x => x.classList.toggle('on', x === b));
+  $$('.subview').forEach(s => s.classList.toggle('on', s.id === 's-' + b.dataset.s));
+});
+
+/* ---------- TODAY ---------- */
+let cur = today();
+let draft = getEntry(keyOf(cur));
+
+function renderToday(){
+  const t = today(), p = periodOf(cur);
+  $('#dDow').innerHTML = DOW[cur.getDay()] + (sameDay(cur, t) ? '<span class="todaytag">TODAY</span>' : '');
+  $('#dLong').textContent = MON[cur.getMonth()] + ' ' + cur.getDate() + ', ' + cur.getFullYear();
+  const idx = daysIn(p).findIndex(d => sameDay(d, cur)) + 1;
+  $('#dPer').textContent = 'Pay period ' + shortDate(p.start) + ' – ' + shortDate(p.end) + ' · day ' + idx + ' of ' + daysIn(p).length;
+  $('#goToday').style.display = sameDay(cur, t) ? 'none' : 'inline-block';
+  $('#fullShift').textContent = '✓ Worked my normal shift (' + fmtH(profile.shiftMin) + ')';
+  $('#shiftNote').textContent = 'Up to your ' + fmtH(profile.shiftMin) + ' shift';
+  $('#tStart').value = draft.start; $('#tEnd').value = draft.end;
+  $('#note').value = draft.note; $('#leaveType').value = draft.leaveType;
+  paintNumbers();
+}
+function paintNumbers(){
+  $$('#v-today .stepper').forEach(s => s.querySelector('.val').textContent = fmtH(draft[s.dataset.f]));
+  $$('#xcat button').forEach(b => b.classList.toggle('on', b.dataset.c === draft.extraCat));
+  $('#dayTotal').textContent = fmtH(draft.reg + draft.extra + draft.uni + draft.leave);
+  const need = draft.extra > 0 && !draft.note.trim();
+  $('#noteWarn').classList.toggle('show', need);
+  $('#note').classList.toggle('bad', need);
+}
+let saveT;
+function save(quiet){
+  const k = keyOf(cur);
+  if(isEmpty(draft)) delete entries[k]; else entries[k] = Object.assign({}, draft);
+  store.set('tt_entries', entries);
+  if(!quiet){ $('#savedMsg').textContent = 'Saved ✓'; clearTimeout(saveT); saveT = setTimeout(() => $('#savedMsg').textContent = '', 1500); }
+}
+function changed(){ paintNumbers(); save(); }
+
+function fromTimes(){
+  if(!draft.start || !draft.end) return;
+  const [sh, sm] = draft.start.split(':').map(Number), [eh, em] = draft.end.split(':').map(Number);
+  let mins = (eh*60 + em) - (sh*60 + sm); if(mins < 0) mins += 1440; // overnight shift
+  const worked = Math.max(0, r10(mins) - draft.brk);
+  draft.reg = Math.min(worked, profile.shiftMin);
+  draft.extra = Math.max(0, worked - profile.shiftMin);
+  changed();
+}
+function step(f, d){
+  if(f === 'brk'){ draft.brk = Math.max(0, draft.brk + d); fromTimes(); changed(); return; }
+  if(f === 'reg'){
+    if(d > 0 && draft.reg >= profile.shiftMin){ draft.extra += d; if(!draft._t){ toast('Over your shift — added to Extra hours'); draft._t = 1; } }
+    else draft.reg = Math.max(0, Math.min(profile.shiftMin, draft.reg + d));
+  } else draft[f] = Math.max(0, Math.min(1440, draft[f] + d));
+  changed();
+}
+$$('#v-today .stepper button').forEach(b => {
+  const f = b.parentNode.dataset.f, d = +b.dataset.d; let t1, t2;
+  const stop = () => { clearTimeout(t1); clearInterval(t2); };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); step(f, d); t1 = setTimeout(() => t2 = setInterval(() => step(f, d), 110), 450); });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+});
+$$('#xcat button').forEach(b => b.onclick = () => { draft.extraCat = b.dataset.c; changed(); });
+$('#tStart').onchange = e => { draft.start = e.target.value; fromTimes(); save(); };
+$('#tEnd').onchange = e => { draft.end = e.target.value; fromTimes(); save(); };
+$('#note').oninput = e => { draft.note = e.target.value; paintNumbers(); save(true); };
+$('#note').onblur = () => save();
+$('#leaveType').onchange = e => { draft.leaveType = e.target.value; save(); };
+$('#fullShift').onclick = () => { draft.reg = profile.shiftMin; draft.extra = 0; changed(); toast('Logged ' + fmtH(profile.shiftMin) + ' regular'); };
+$('#clearDay').onclick = () => ask('Clear all time for ' + shortDate(cur) + '?', () => { draft = blankEntry(); save(); renderToday(); toast('Day cleared'); });
+function goDay(d){ save(true); cur = d; draft = getEntry(keyOf(cur)); renderToday(); }
+$('#prevDay').onclick = () => goDay(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()-1));
+$('#nextDay').onclick = () => goDay(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1));
+$('#goToday').onclick = () => goDay(today());
+
+/* ---------- TIMESHEET ---------- */
+let perRef = today();
+function rateOf(c){
+  const r = profile.rates, reg = parseFloat(r.reg) || 0;
+  if(c === 'reg') return reg;
+  if(c === 'ot15') return parseFloat(r.ot15) || reg * 1.5;
+  if(c === 'ot20') return parseFloat(r.ot20) || reg * 2;
+  if(c === 'uni') return parseFloat(r.uni) || 0;
+  if(c === 'leave') return parseFloat(r.leave) || reg;
+}
+const CAT = [['reg','Regular'],['ot15','Overtime 1.5'],['ot20','Overtime 2.0'],['uni','Uniform hourly'],['leave','Sick/Hol/Misc']];
+function periodData(p){
+  const tot = {reg:0,ot15:0,ot20:0,uni:0,leave:0}, rows = [];
+  daysIn(p).forEach(d => { const k = keyOf(d), e = entries[k] ? getEntry(k) : null, c = e ? cols(e) : null;
+    if(c) for(const x in tot) tot[x] += c[x];
+    rows.push({d, k, e, c}); });
+  let pay = 0; const lines = CAT.filter(([c]) => tot[c]).map(([c, n]) => { const amt = tot[c]/60 * rateOf(c); pay += amt; return {c, n, min:tot[c], rate:rateOf(c), amt}; });
+  return {tot, rows, lines, pay};
+}
+function renderSheet(){
+  const p = periodOf(perRef), {tot, rows, lines, pay} = periodData(p), t = today();
+  $('#perTitle').textContent = p.label;
+  $('#perRange').textContent = shortDate(p.start) + ', ' + p.start.getFullYear() + ' – ' + shortDate(p.end) + ', ' + p.end.getFullYear();
+  $('#kReg').textContent = fmtH(tot.reg);
+  $('#kExtra').textContent = fmtH(tot.ot15 + tot.ot20);
+  $('#kPay').textContent = pay ? '$' + Math.round(pay).toLocaleString() : '—';
+  $('#sheetBody').innerHTML = rows.map(({d, k, e, c}) => {
+    const cls = [sameDay(d, t) ? 'today' : '', d > t ? 'fut' : '', [0,6].includes(d.getDay()) ? 'wk' : '', e && e.extra && !e.note.trim() ? 'flag' : ''].join(' ');
+    const ex = e ? (e.note.trim() ? esc(e.note) : (e.extra ? '⚠ explanation needed' : '')) + (e.leave && e.leaveType ? ' <i>(' + e.leaveType + ')</i>' : '') : '';
+    return `<tr class="${cls}" data-k="${k}"><td class="d">${d.getDate()}<small>${DOW[d.getDay()].slice(0,2)}</small></td>
+      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot20, 1) : ''}</td>
+      <td>${c ? fmtH(c.uni, 1) : ''}</td><td>${c ? fmtH(c.leave, 1) : ''}</td><td class="ex">${ex}</td></tr>`;
+  }).join('');
+  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td><td class="xcol">${fmtH(tot.ot20)}</td><td>${fmtH(tot.uni)}</td><td>${fmtH(tot.leave)}</td><td></td></tr>`;
+  $$('#sheetBody tr').forEach(tr => tr.onclick = () => { const [y, m, d] = tr.dataset.k.split('-').map(Number); cur = new Date(y, m-1, d); draft = getEntry(tr.dataset.k); show('today'); });
+  $('#payCalc').innerHTML = lines.length
+    ? lines.map(l => `<div class="pl"><span>${l.n}: ${dec(l.min)} hrs × ${l.rate ? money(l.rate) : '<i>no rate</i>'}</span><b>${money(l.amt)}</b></div>`).join('') + `<div class="pl tot"><span>TOTAL</span><span>${money(pay)}</span></div>`
+    : '<span class="muted">No hours in this period yet.</span>';
+  if(lines.length && !parseFloat(profile.rates.reg)) $('#payCalc').innerHTML += '<p class="muted" style="margin:8px 0 0">Add your hourly rate in Profile to see dollar amounts.</p>';
+  buildPrint(p, tot, rows, lines, pay);
+}
+function esc(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+$('#prevPer').onclick = () => { const p = periodOf(perRef); perRef = new Date(p.start.getFullYear(), p.start.getMonth(), p.start.getDate()-1); renderSheet(); };
+$('#nextPer').onclick = () => { const p = periodOf(perRef); perRef = new Date(p.end.getFullYear(), p.end.getMonth(), p.end.getDate()+1); renderSheet(); };
+
+function buildPrint(p, tot, rows, lines, pay){
+  const L = [...lines]; while(L.length < 3) L.push(null);
+  $('#printSheet').innerHTML = `<h2>TIME SHEET</h2>
+  <div class="hdr"><div>NAME: ${esc(profile.name)}</div><div>MONTH: ${MON[p.end.getMonth()]} &nbsp; YR: ${p.end.getFullYear()}</div>
+  <div>SCHOOL/OFFICE: ${esc(profile.office)}</div><div>POSITION: ${esc(profile.position)}</div></div>
+  <div style="font-size:7.5pt;margin-bottom:3px">Each date during the month with time assigned must be filled in. Period ${shortDate(p.start)} – ${shortDate(p.end)}, ${p.end.getFullYear()}.</div>
+  <table><tr><th>Date</th><th>Reg.</th><th>OT 1.5</th><th>OT 2.0</th><th>Uniform Hourly</th><th>Sick/Hol. Misc.</th><th>Explanation/Justification — What duties are you performing?</th></tr>
+  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td><td class="n">${c ? dec(c.ot20) : ''}</td><td class="n">${c ? dec(c.uni) : ''}</td><td class="n">${c ? dec(c.leave) : ''}${e && e.leave && e.leaveType ? ' ' + e.leaveType[0] : ''}</td><td class="ex">${e ? esc(e.note) : ''}</td></tr>`).join('')}
+  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td><td class="n"><b>${dec(tot.ot20)}</b></td><td class="n"><b>${dec(tot.uni)}</b></td><td class="n"><b>${dec(tot.leave)}</b></td><td></td></tr></table>
+  <div style="font-size:7.5pt;margin-top:2px">* If hours listed under "overtime" please explain in "Explanation" column.</div>
+  <div class="foot"><div class="calc">${L.map(l => l ? `<div>${dec(l.min)} Hours (${l.n}) × ${money(l.rate)} Rate = ${money(l.amt)}</div>` : '<div>_____ Hours × _____ Rate = _____</div>').join('')}<div><b>TOTAL ${money(pay)}</b></div></div>
+  <div>${profile.budget.map(b => `<div class="sig" style="margin-top:12px">${esc(b) || '&nbsp;'}<br>Budget Code (MUST BE COMPLETED)</div>`).join('')}</div>
+  <div class="sig">Employee's Signature</div><div class="sig">Supervisor's Signature - Site Approval</div>
+  <div class="sig">${esc(profile.empId) || '&nbsp;'}<br>Employee ID # (located on check stubs)</div><div class="sig">Administrative Approval - District Office Approval</div></div>`;
+}
+function download(name, text, type){
+  try{ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  catch(e){ toast('Download not available here'); }
+}
+$('#printBtn').onclick = () => { renderSheet(); try{ window.print(); }catch(e){ toast('Printing not available here'); } };
+$('#csvBtn').onclick = () => {
+  const p = periodOf(perRef), {tot, rows} = periodData(p), q = s => '"' + String(s).replace(/"/g, '""') + '"';
+  const out = [['Date','Regular','OT 1.5','OT 2.0','Uniform Hourly','Sick/Hol/Misc','Leave Type','Explanation'].join(',')];
+  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? dec(c.ot15) : '', c ? dec(c.ot20) : '', c ? dec(c.uni) : '', c ? dec(c.leave) : '', e ? e.leaveType : '', q(e ? e.note : '')].join(',')));
+  out.push(['TOTAL', dec(tot.reg), dec(tot.ot15), dec(tot.ot20), dec(tot.uni), dec(tot.leave), '', ''].join(','));
+  download('timesheet-' + keyOf(p.end).slice(0,7) + '.csv', out.join('\n'), 'text/csv');
+};
+$('#copyBtn').onclick = async () => {
+  const p = periodOf(perRef), {tot, lines, pay} = periodData(p);
+  const txt = `Time sheet — ${profile.name || 'Stacy'} — ${shortDate(p.start)} to ${shortDate(p.end)}, ${p.end.getFullYear()}\n` +
+    CAT.map(([c, n]) => `${n}: ${dec(tot[c]) || '0.00'} hrs`).join('\n') + (pay ? `\nEstimated pay: ${money(pay)}` : '');
+  try{ await navigator.clipboard.writeText(txt); toast('Summary copied'); }catch(e){ toast('Copy not available here'); }
+};
+
+/* ---------- PROFILE ---------- */
+function fillProfile(){
+  $('#pShiftH').innerHTML = Array.from({length:17}, (_, i) => `<option value="${i}">${i} hr</option>`).join('');
+  $('#pShiftM').innerHTML = [0,10,20,30,40,50].map(m => `<option value="${m}">${m} min</option>`).join('');
+  $('#pStart').innerHTML = Array.from({length:28}, (_, i) => `<option value="${i+1}">${i+1}${i === 0 ? ' (calendar month)' : ''}</option>`).join('');
+  $('#pShiftH').value = Math.floor(profile.shiftMin / 60); $('#pShiftM').value = profile.shiftMin % 60;
+  $('#pXcat').value = profile.extraCat; $('#pStart').value = profile.periodStart; $('#pFmt').value = profile.fmt;
+  [['pName','name'],['pOffice','office'],['pPosition','position'],['pEmpId','empId']].forEach(([id, f]) => $('#' + id).value = profile[f]);
+  [['rReg','reg'],['rOt15','ot15'],['rOt20','ot20'],['rUni','uni'],['rLeave','leave']].forEach(([id, f]) => $('#' + id).value = profile.rates[f]);
+  profile.budget.forEach((b, i) => $('#b' + i).value = b);
+}
+function saveProfile(){
+  const sm = (+$('#pShiftH').value) * 60 + (+$('#pShiftM').value);
+  if(sm < 10){ toast('Shift must be at least 10 minutes'); $('#pShiftM').value = 10; return saveProfile(); }
+  profile.shiftMin = sm; profile.extraCat = $('#pXcat').value; profile.periodStart = +$('#pStart').value; profile.fmt = $('#pFmt').value;
+  [['pName','name'],['pOffice','office'],['pPosition','position'],['pEmpId','empId']].forEach(([id, f]) => profile[f] = $('#' + id).value.trim());
+  [['rReg','reg'],['rOt15','ot15'],['rOt20','ot20'],['rUni','uni'],['rLeave','leave']].forEach(([id, f]) => profile.rates[f] = $('#' + id).value);
+  profile.budget = [0,1,2].map(i => $('#b' + i).value.trim());
+  store.set('tt_profile', profile);
+  if(isEmpty(draft)) draft.extraCat = profile.extraCat;
+}
+$$('#v-profile input, #v-profile select').forEach(el => el.addEventListener('change', () => { saveProfile(); toast('Profile saved'); }));
+
+/* ---------- UPDATES ---------- */
+const cmpVer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+  for(let i = 0; i < 3; i++){ if((x[i]||0) !== (y[i]||0)) return (x[i]||0) > (y[i]||0) ? 1 : -1; } return 0; };
+function renderUpdates(){
+  $('#uCur').textContent = 'v' + APP_VERSION; $('#hdrVer').textContent = 'v' + APP_VERSION;
+  $('#uAuto').checked = settings.autoUpdate;
+  $('#uLast').textContent = settings.lastCheck ? new Date(settings.lastCheck).toLocaleString() : 'Never';
+  const has = latest && cmpVer(latest.version, APP_VERSION) > 0;
+  $('#uLatest').innerHTML = latest ? 'v' + latest.version + ' ' + (has ? '<span class="badge new">NEW</span>' : '<span class="badge ok">Up to date</span>') : '—';
+  $('#uApply').style.display = has ? 'block' : 'none';
+  $('#updDot').textContent = has ? '•' : ''; $('#navDot').textContent = has ? ' •' : '';
+  $('#updBanner').classList.toggle('show', !!has);
+  if(has) $('#updText').textContent = 'Version ' + latest.version + ' is available.';
+  if(latest && latest.releases) $('#uNotes').innerHTML = latest.releases.map(r =>
+    `<h4>v${esc(r.version)} <span class="muted">· ${esc(r.date || '')}</span></h4><ul class="notes">${(r.notes || []).map(n => '<li>' + esc(n) + '</li>').join('')}</ul>`).join('');
+}
+async function checkUpdates(manual){
+  if(manual) $('#uCheck').textContent = 'Checking…';
+  try{
+    const r = await fetch('version.json?t=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    latest = await r.json(); settings.lastCheck = Date.now(); store.set('tt_settings', settings);
+    if(manual) toast(cmpVer(latest.version, APP_VERSION) > 0 ? 'Update available: v' + latest.version : "You're on the latest version");
+  }catch(e){ if(manual) toast("Couldn't check — are you online?"); }
+  if(manual) $('#uCheck').textContent = 'Check for updates';
+  renderUpdates();
+}
+async function applyUpdate(){
+  toast('Updating…'); save(true);
+  try{
+    if('serviceWorker' in navigator){ const reg = await navigator.serviceWorker.getRegistration(); if(reg){ await reg.update(); if(reg.waiting) reg.waiting.postMessage('skip'); } }
+    if(window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); }
+  }catch(e){}
+  setTimeout(() => location.reload(), 400);
+}
+$('#uCheck').onclick = () => checkUpdates(true);
+$('#uApply').onclick = applyUpdate;
+$('#updNow').onclick = applyUpdate;
+$('#uAuto').onchange = e => { settings.autoUpdate = e.target.checked; store.set('tt_settings', settings); };
+
+/* ---------- BACKUP ---------- */
+$('#bExport').onclick = () => download('time-tracker-backup-' + keyOf(today()) + '.json',
+  JSON.stringify({app:'stacys-time-tracker', version:APP_VERSION, saved:new Date().toISOString(), profile, entries}, null, 1), 'application/json');
+$('#bImportBtn').onclick = () => $('#bImport').click();
+$('#bImport').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  try{ const j = JSON.parse(await f.text()); if(!j.entries) throw 0;
+    ask('Restore this backup? It replaces the time entries on this phone.', () => {
+      entries = j.entries; if(j.profile) profile = Object.assign({}, DEF, j.profile);
+      store.set('tt_entries', entries); store.set('tt_profile', profile);
+      fillProfile(); draft = getEntry(keyOf(cur)); renderToday(); toast('Backup restored'); });
+  }catch(err){ toast("That file isn't a Time Tracker backup"); }
+  e.target.value = '';
+};
+$('#bErase').onclick = () => ask('Erase ALL time entries and profile info from this phone? This cannot be undone.', () => {
+  entries = {}; profile = Object.assign({}, DEF, {rates:{...DEF.rates}, budget:['','','']});
+  store.set('tt_entries', entries); store.set('tt_profile', profile);
+  fillProfile(); draft = blankEntry(); renderToday(); toast('All data erased'); });
+
+/* ---------- Install prompt ---------- */
+let deferred;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; $('#installBtn').style.display = 'block'; });
+$('#installBtn').onclick = async () => { if(!deferred) return; deferred.prompt(); await deferred.userChoice; deferred = null; $('#installBtn').style.display = 'none'; };
+
+/* ---------- Day rollover: if the app stays open past midnight, jump to the new day ---------- */
+let lastDay = keyOf(today());
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && keyOf(today()) !== lastDay){
+    if(keyOf(cur) === lastDay) goDay(today());
+    lastDay = keyOf(today());
+  }
+});
+
+/* ---------- Start up ---------- */
+fillProfile(); renderToday(); renderUpdates();
+if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').catch(() => {}); }catch(e){} }
+(async function boot(){
+  const minSplash = new Promise(r => setTimeout(r, 2300));
+  if(settings.autoUpdate){ $('#splashSub').textContent = 'Checking for updates…'; await Promise.race([checkUpdates(false), new Promise(r => setTimeout(r, 3000))]); }
+  await minSplash;
+  $('#splash').classList.add('hide');
+  setTimeout(() => $('#splash').remove(), 700);
+  if(latest && cmpVer(latest.version, APP_VERSION) > 0) toast('New version ' + latest.version + ' is ready — tap Update');
+})();
+$('#splash').onclick = () => $('#splash').classList.add('hide');
+</script>
+</body>
+</html>

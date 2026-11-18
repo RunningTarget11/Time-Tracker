@@ -1,7 +1,14 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.8.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Removed the Explanation / duties box \u2014 no explanation needed for extra hours"
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "Nov 17, 2026",

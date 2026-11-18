@@ -268,11 +268,6 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
       <div class="totalbar"><span>Day total</span><span id="dayTotal">0:00</span></div>
     </div>
 
-    <div class="card">
-      <h3>Explanation / duties</h3>
-      <textarea id="note" placeholder="What duties were you performing?"></textarea>
-      <div class="warn" id="noteWarn">⚠ An explanation is required when extra hours are entered.</div>
-    </div>
     <div class="saved" id="savedMsg"></div>
     <div class="btnrow"><button class="ghost danger" id="clearDay">Clear this day</button></div>
   </section>
@@ -417,7 +412,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.7.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.8.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -503,7 +498,6 @@ function renderToday(){
   $('#fullShift').textContent = '✓ Worked my normal shift (' + fmtH(profile.shiftMin) + ')';
   $('#shiftNote').textContent = 'Up to your ' + fmtH(profile.shiftMin) + ' shift';
   setClock('#tStart', draft.start); setClock('#tEnd', draft.end);
-  $('#note').value = draft.note;
   paintNumbers();
 }
 function paintNumbers(){
@@ -512,9 +506,6 @@ function paintNumbers(){
   $('#tTot .th').value = String(Math.min(24, Math.floor(tot / 60))); $('#tTot .tm').value = String(tot % 60);
   $('#vReg').textContent = fmtH(draft.reg); $('#vExtra').textContent = fmtH(draft.extra);
   $('#dayTotal').textContent = fmtH(draft.reg + draft.extra);
-  const need = draft.extra > 0 && !draft.note.trim();
-  $('#noteWarn').classList.toggle('show', need);
-  $('#note').classList.toggle('bad', need);
 }
 let saveT;
 function save(quiet){
@@ -599,8 +590,6 @@ function setClock(sel, v){
 }
 buildClock('#tStart', v => { draft.start = v; fromTimes(); save(); });
 buildClock('#tEnd', v => { draft.end = v; fromTimes(); save(); });
-$('#note').oninput = e => { draft.note = e.target.value; paintNumbers(); save(true); };
-$('#note').onblur = () => save();
 $('#fullShift').onclick = () => { draft.reg = profile.shiftMin; draft.extra = 0; changed(); celebrate('Logged ' + fmtH(profile.shiftMin) + ' — ' + CHEERS[Math.floor(Math.random() * CHEERS.length)]); };
 $('#clearDay').onclick = () => ask('Clear all time for ' + shortDate(cur) + '?', () => { draft = blankEntry(); save(); renderToday(); toast('Day cleared'); });
 function goDay(d){ save(true); cur = d; draft = getEntry(keyOf(cur)); renderToday(); }
@@ -635,10 +624,9 @@ function renderSheet(){
   $('#kExtra').textContent = fmtH(tot.ot15 + tot.ot20);
   $('#kPay').textContent = pay ? '$' + Math.round(pay).toLocaleString() : '—';
   $('#sheetBody').innerHTML = rows.map(({d, k, e, c}) => {
-    const cls = [sameDay(d, t) ? 'today' : '', d > t ? 'fut' : '', [0,6].includes(d.getDay()) ? 'wk' : '', e && e.extra && !e.note.trim() ? 'flag' : ''].join(' ');
-    const ex = e ? (e.note.trim() ? esc(e.note) : (e.extra ? '⚠ explanation needed' : '')) : '';
+    const cls = [sameDay(d, t) ? 'today' : '', d > t ? 'fut' : '', [0,6].includes(d.getDay()) ? 'wk' : ''].join(' ');
     return `<tr class="${cls}" data-k="${k}"><td class="d">${d.getDate()}<small>${DOW[d.getDay()].slice(0,2)}</small></td>
-      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td></tr>` + (ex ? `<tr class="${cls} exrow" data-k="${k}"><td class="ex" colspan="3">${ex}</td></tr>` : '');
+      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td></tr>`;
   }).join('');
   $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td></tr>`;
   $$('#sheetBody tr').forEach(tr => tr.onclick = () => { const [y, m, d] = tr.dataset.k.split('-').map(Number); cur = new Date(y, m-1, d); draft = getEntry(tr.dataset.k); show('today'); });
@@ -658,10 +646,9 @@ function buildPrint(p, tot, rows, lines, pay){
   <div class="hdr"><div>NAME: ${esc(profile.name)}</div><div>MONTH: ${MON[p.end.getMonth()]} &nbsp; YR: ${p.end.getFullYear()}</div>
   <div>SCHOOL/OFFICE: ${esc(profile.office)}</div><div>POSITION: ${esc(profile.position)}</div></div>
   <div style="font-size:7.5pt;margin-bottom:3px">Each date during the month with time assigned must be filled in. Period ${shortDate(p.start)} – ${shortDate(p.end)}, ${p.end.getFullYear()}.</div>
-  <table><tr><th>Date</th><th>Regular</th><th>Extra</th><th>Explanation/Justification — What duties are you performing?</th></tr>
-  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td><td class="ex">${e ? esc(e.note) : ''}</td></tr>`).join('')}
-  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td><td></td></tr></table>
-  <div style="font-size:7.5pt;margin-top:2px">* If hours listed under "overtime" please explain in "Explanation" column.</div>
+  <table><tr><th>Date</th><th>Regular</th><th>Extra</th></tr>
+  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td></tr>`).join('')}
+  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td></tr></table>
   <div class="foot"><div class="calc">${L.map(l => l ? `<div>${dec(l.min)} Hours (${l.n}) × ${money(l.rate)} Rate = ${money(l.amt)}</div>` : '<div>_____ Hours × _____ Rate = _____</div>').join('')}<div><b>TOTAL ${money(pay)}</b></div></div>
   <div>${profile.budget.map(b => `<div class="sig" style="margin-top:12px">${esc(b) || '&nbsp;'}<br>Budget Code (MUST BE COMPLETED)</div>`).join('')}</div>
   <div class="sig">Employee's Signature</div><div class="sig">Supervisor's Signature - Site Approval</div>
@@ -674,9 +661,9 @@ function download(name, text, type){
 $('#printBtn').onclick = () => { renderSheet(); try{ window.print(); }catch(e){ toast('Printing not available here'); } };
 $('#csvBtn').onclick = () => {
   const p = periodOf(perRef), {tot, rows} = periodData(p), q = s => '"' + String(s).replace(/"/g, '""') + '"';
-  const out = [['Date','Regular','Extra','Explanation'].join(',')];
-  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? dec(c.ot15) : '', q(e ? e.note : '')].join(',')));
-  out.push(['TOTAL', dec(tot.reg), dec(tot.ot15), ''].join(','));
+  const out = [['Date','Regular','Extra'].join(',')];
+  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? dec(c.ot15) : ''].join(',')));
+  out.push(['TOTAL', dec(tot.reg), dec(tot.ot15)].join(','));
   download('timesheet-' + keyOf(p.end).slice(0,7) + '.csv', out.join('\n'), 'text/csv');
 };
 $('#copyBtn').onclick = async () => {

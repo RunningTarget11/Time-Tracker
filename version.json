@@ -1,7 +1,14 @@
 {
-  "version": "2.0.4",
+  "version": "2.1.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "2.1.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Settings \u2192 Share the app: send or copy the install link for a new user"
+      ]
+    },
     {
       "version": "2.0.4",
       "date": "Nov 17, 2026",

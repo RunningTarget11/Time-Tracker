@@ -342,6 +342,12 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
     <div class="subview on" id="s-general">
       <div class="card">
+        <h3>📤 Share the app</h3>
+        <p class="muted" style="margin:0 0 8px">Send this link to someone so they can install their own copy. Their time stays on their own phone.</p>
+        <div id="shareUrl" style="font-family:ui-monospace,monospace;font-size:.82rem;background:#f8f3ec;border-radius:10px;padding:10px;word-break:break-all;margin-bottom:10px"></div>
+        <div class="btnrow"><button class="primary" id="shareBtn">Share…</button><button class="ghost" id="copyLink">Copy link</button></div>
+      </div>
+      <div class="card">
         <h3>Install on your phone</h3>
         <button class="primary" id="installBtn" style="display:none;width:100%;margin-bottom:10px">📲 Install Time Tracker</button>
         <p class="muted" style="margin:0">Android (Chrome): tap the <b>⋮</b> menu → <b>Install app</b> (or <b>Add to Home screen</b>). It then opens full-screen like a regular app and works offline.</p>
@@ -404,7 +410,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '2.0.4';
+const APP_VERSION = '2.1.0';
 document.getElementById('splashVer').textContent = 'Version ' + APP_VERSION;   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
@@ -761,6 +767,19 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- Start up ---------- */
 fillProfile(); renderToday(); renderUpdates();
+/* share app */
+const APP_URL = location.protocol === 'file:' ? 'https://runningtarget11.github.io/Time-Tracker/' : location.origin + location.pathname.replace(/index\.html$/, '');
+const SHARE_MSG = "Here's the Time Tracker app. Open this link in Chrome, then tap ⋮ → Install app:";
+$('#shareUrl').textContent = APP_URL;
+async function copyLink(){
+  try{ await navigator.clipboard.writeText(SHARE_MSG + ' ' + APP_URL); toast('Link copied — paste it in a text'); }
+  catch(e){ const r = document.createRange(); r.selectNodeContents($('#shareUrl')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Press and hold the link to copy it'); }
+}
+$('#copyLink').onclick = copyLink;
+$('#shareBtn').onclick = async () => {
+  if(navigator.share){ try{ await navigator.share({title:'Time Tracker', text:SHARE_MSG, url:APP_URL}); }catch(e){} }
+  else copyLink();
+};
 if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).catch(() => {}); }catch(e){} }
 (async function boot(){
   const minSplash = new Promise(r => setTimeout(r, 2300));

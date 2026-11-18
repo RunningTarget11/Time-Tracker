@@ -1,7 +1,15 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.4.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Time can be entered to the minute (1-minute steps); hold + or \u2212 to speed up",
+        "Clock times count every minute; anything over the 3.8-hour (3:48) shift still goes to Extra hours"
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "Nov 17, 2026",

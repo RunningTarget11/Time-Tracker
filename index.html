@@ -244,10 +244,6 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
         <div class="f">Start<div class="dclock" id="tStart"></div></div>
         <div class="f">End<div class="dclock" id="tEnd"></div></div>
       </div>
-      <div class="line" style="border-top:0;padding-bottom:0">
-        <div class="lbl">Unpaid lunch / break</div>
-        <div class="stepper" data-f="brk"><button data-d="-1">−</button><span class="val"></span><button data-d="1">+</button></div>
-      </div>
     </div>
 
     <div class="card">
@@ -412,7 +408,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.8.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.9.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -520,7 +516,7 @@ function fromTimes(){
   if(!draft.start || !draft.end) return;
   const [sh, sm] = draft.start.split(':').map(Number), [eh, em] = draft.end.split(':').map(Number);
   let mins = (eh*60 + em) - (sh*60 + sm); if(mins < 0) mins += 1440; // overnight shift
-  setTotal(mins - draft.brk);
+  setTotal(mins);
 }
 /* total hours worked → first part is Regular (up to the shift), the rest is Extra */
 const CHEERS = ['Case closed! 🔍', 'Nailed it! 🎉', 'Clocked and locked 🔒', 'Another one in the books 📚', 'Look at you go! ⭐', 'Time well spent ⏱️', 'Boom, logged! 💥'];
@@ -552,7 +548,6 @@ function setTotal(m){
   if(m !== before){ const v = $('#tTot'); v.classList.remove('pop'); void v.offsetWidth; v.classList.add('pop'); }
 }
 function step(f, d){
-  if(f === 'brk'){ draft.brk = Math.max(0, draft.brk + d); fromTimes(); changed(); return; }
   if(f === 'tot'){ draft.start = draft.end = ''; setClock('#tStart', ''); setClock('#tEnd', ''); return setTotal(draft.reg + draft.extra + d); }
   draft[f] = Math.max(0, Math.min(1440, draft[f] + d));
   changed();

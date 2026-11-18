@@ -1,7 +1,14 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.9.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Removed Unpaid lunch / break \u2014 clock times count straight through"
+      ]
+    },
     {
       "version": "1.8.0",
       "date": "Nov 17, 2026",

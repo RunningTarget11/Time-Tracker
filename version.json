@@ -1,7 +1,14 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "2.0.2",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Splash screen credits Circuit Mandate"
+      ]
+    },
     {
       "version": "2.0.1",
       "date": "Nov 17, 2026",

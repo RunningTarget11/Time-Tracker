@@ -8,7 +8,7 @@ On Android, open the link in Chrome → ⋮ menu → **Install app**.
 ## Features
 - Opens on today's date (read from the phone); arrows move between days
 - Profile: shift length (stays until changed), extra-hours category, pay-period start day (default 19th), rates, budget codes, employee info
-- 10-minute increments everywhere; time over the shift goes to **Extra hours** (OT 1.5 or 2.0)
+- 6-minute increments (0.1 hr) everywhere; time over the shift goes to **Extra hours** (OT 1.5 or 2.0)
 - Explanation required when extra hours are entered (flagged on the timesheet)
 - Timesheet view matching the paper form: Reg / OT 1.5 / OT 2.0 / Uniform Hourly / Sick-Hol-Misc / Explanation, totals, Hours × Rate = $
 - Print/PDF laid out like the paper TIME SHEET, CSV export, backup/restore

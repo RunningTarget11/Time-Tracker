@@ -262,7 +262,6 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
       </div>
       <div class="line extra">
         <div class="lbl">Extra hours<small>Figured automatically — time over your shift</small>
-          <div class="seg" id="xcat"><button data-c="ot15">1.5×</button><button data-c="ot20">2.0×</button></div>
         </div>
         <div class="autoval x" id="vExtra"></div>
       </div>
@@ -292,7 +291,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
     </div>
     <div class="tablewrap">
       <table class="sheet">
-        <thead><tr><th>Date</th><th>Reg.</th><th>OT 1.5</th><th>OT 2.0</th></tr></thead>
+        <thead><tr><th>Date</th><th>Regular</th><th>Extra</th></tr></thead>
         <tbody id="sheetBody"></tbody>
         <tfoot id="sheetFoot"></tfoot>
       </table>
@@ -315,7 +314,6 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
         <label class="f">+ Minutes<select id="pShiftM"></select></label>
       </div>
       <p class="muted" style="margin:8px 0 0">This stays the same every day until you change it. Anything over it is recorded as <b>Extra hours</b>.</p>
-      <label class="f" style="margin-top:10px">Extra hours go into<select id="pXcat"><option value="ot15">Overtime 1.5×</option><option value="ot20">Overtime 2.0×</option></select></label>
     </div>
     <div class="card">
       <h3>Time sheet info</h3>
@@ -334,10 +332,9 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
       <h3>Hourly rates <span class="muted">(optional, for Hours × Rate)</span></h3>
       <div class="row2">
         <label class="f">Regular $<input id="rReg" type="number" step="0.01" inputmode="decimal"></label>
-        <label class="f">OT 1.5 $<input id="rOt15" type="number" step="0.01" inputmode="decimal" placeholder="auto"></label>
-        <label class="f">OT 2.0 $<input id="rOt20" type="number" step="0.01" inputmode="decimal" placeholder="auto"></label>
+        <label class="f">Extra $<input id="rOt15" type="number" step="0.01" inputmode="decimal" placeholder="= regular"></label>
       </div>
-      <p class="muted" style="margin:8px 0 0">Leave OT blank to use regular × 1.5 or × 2.0.</p>
+      <p class="muted" style="margin:8px 0 0">Leave Extra blank to pay extra hours at the regular rate.</p>
     </div>
     <div class="card">
       <h3>Budget codes</h3>
@@ -420,7 +417,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.6.0';   // bump this AND version.json for every release
+const APP_VERSION = '1.7.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -463,7 +460,7 @@ const shortDate = d => MON[d.getMonth()].slice(0,3) + ' ' + d.getDate();
 
 function blankEntry(){ return {reg:0,extra:0,extraCat:profile.extraCat,uni:0,leave:0,leaveType:'',start:'',end:'',brk:0,note:''}; }
 function getEntry(k){ return Object.assign(blankEntry(), entries[k] || {}); }
-function cols(e){ return {reg:e.reg||0, ot15:e.extraCat==='ot20'?0:(e.extra||0), ot20:e.extraCat==='ot20'?(e.extra||0):0, uni:e.uni||0, leave:e.leave||0}; }
+function cols(e){ return {reg:e.reg||0, ot15:e.extra||0, ot20:0, uni:e.uni||0, leave:e.leave||0}; }
 const isEmpty = e => !e.reg && !e.extra && !e.uni && !e.leave && !(e.note||'').trim() && !e.start && !e.end;
 
 /* ---------- Toast / modal ---------- */
@@ -514,7 +511,6 @@ function paintNumbers(){
   const tot = draft.reg + draft.extra;
   $('#tTot .th').value = String(Math.min(24, Math.floor(tot / 60))); $('#tTot .tm').value = String(tot % 60);
   $('#vReg').textContent = fmtH(draft.reg); $('#vExtra').textContent = fmtH(draft.extra);
-  $$('#xcat button').forEach(b => b.classList.toggle('on', b.dataset.c === draft.extraCat));
   $('#dayTotal').textContent = fmtH(draft.reg + draft.extra);
   const need = draft.extra > 0 && !draft.note.trim();
   $('#noteWarn').classList.toggle('show', need);
@@ -579,7 +575,6 @@ $$('#v-today .stepper button').forEach(b => {
 $('#tTot .th').innerHTML = Array.from({length:25}, (_, i) => `<option value="${i}">${i}</option>`).join('');
 $('#tTot .tm').innerHTML = Array.from({length:60}, (_, i) => `<option value="${i}">${pad(i)}</option>`).join('');
 $$('#tTot select').forEach(x => x.onchange = () => { draft.start = draft.end = ''; setClock('#tStart', ''); setClock('#tEnd', ''); setTotal(+$('#tTot .th').value * 60 + +$('#tTot .tm').value); });
-$$('#xcat button').forEach(b => b.onclick = () => { draft.extraCat = b.dataset.c; changed(); });
 /* digital clock pickers: hour : minute (6-min steps) AM/PM, value stored as 24h "HH:MM" */
 function buildClock(sel, onSet){
   const el = $(sel);
@@ -618,12 +613,12 @@ let perRef = today();
 function rateOf(c){
   const r = profile.rates, reg = parseFloat(r.reg) || 0;
   if(c === 'reg') return reg;
-  if(c === 'ot15') return parseFloat(r.ot15) || reg * 1.5;
+  if(c === 'ot15') return parseFloat(r.ot15) || reg;
   if(c === 'ot20') return parseFloat(r.ot20) || reg * 2;
   if(c === 'uni') return parseFloat(r.uni) || 0;
   if(c === 'leave') return parseFloat(r.leave) || reg;
 }
-const CAT = [['reg','Regular'],['ot15','Overtime 1.5'],['ot20','Overtime 2.0']];
+const CAT = [['reg','Regular'],['ot15','Extra hours']];
 function periodData(p){
   const tot = {reg:0,ot15:0,ot20:0,uni:0,leave:0}, rows = [];
   daysIn(p).forEach(d => { const k = keyOf(d), e = entries[k] ? getEntry(k) : null, c = e ? cols(e) : null;
@@ -643,9 +638,9 @@ function renderSheet(){
     const cls = [sameDay(d, t) ? 'today' : '', d > t ? 'fut' : '', [0,6].includes(d.getDay()) ? 'wk' : '', e && e.extra && !e.note.trim() ? 'flag' : ''].join(' ');
     const ex = e ? (e.note.trim() ? esc(e.note) : (e.extra ? '⚠ explanation needed' : '')) : '';
     return `<tr class="${cls}" data-k="${k}"><td class="d">${d.getDate()}<small>${DOW[d.getDay()].slice(0,2)}</small></td>
-      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot20, 1) : ''}</td></tr>` + (ex ? `<tr class="${cls} exrow" data-k="${k}"><td class="ex" colspan="4">${ex}</td></tr>` : '');
+      <td>${c ? fmtH(c.reg, 1) : ''}</td><td class="xcol">${c ? fmtH(c.ot15, 1) : ''}</td></tr>` + (ex ? `<tr class="${cls} exrow" data-k="${k}"><td class="ex" colspan="3">${ex}</td></tr>` : '');
   }).join('');
-  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td><td class="xcol">${fmtH(tot.ot20)}</td></tr>`;
+  $('#sheetFoot').innerHTML = `<tr><td>Total</td><td>${fmtH(tot.reg)}</td><td class="xcol">${fmtH(tot.ot15)}</td></tr>`;
   $$('#sheetBody tr').forEach(tr => tr.onclick = () => { const [y, m, d] = tr.dataset.k.split('-').map(Number); cur = new Date(y, m-1, d); draft = getEntry(tr.dataset.k); show('today'); });
   $('#payCalc').innerHTML = lines.length
     ? lines.map(l => `<div class="pl"><span>${l.n}: ${dec(l.min)} hrs × ${l.rate ? money(l.rate) : '<i>no rate</i>'}</span><b>${money(l.amt)}</b></div>`).join('') + `<div class="pl tot"><span>TOTAL</span><span>${money(pay)}</span></div>`
@@ -663,9 +658,9 @@ function buildPrint(p, tot, rows, lines, pay){
   <div class="hdr"><div>NAME: ${esc(profile.name)}</div><div>MONTH: ${MON[p.end.getMonth()]} &nbsp; YR: ${p.end.getFullYear()}</div>
   <div>SCHOOL/OFFICE: ${esc(profile.office)}</div><div>POSITION: ${esc(profile.position)}</div></div>
   <div style="font-size:7.5pt;margin-bottom:3px">Each date during the month with time assigned must be filled in. Period ${shortDate(p.start)} – ${shortDate(p.end)}, ${p.end.getFullYear()}.</div>
-  <table><tr><th>Date</th><th>Reg.</th><th>OT 1.5</th><th>OT 2.0</th><th>Explanation/Justification — What duties are you performing?</th></tr>
-  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td><td class="n">${c ? dec(c.ot20) : ''}</td><td class="ex">${e ? esc(e.note) : ''}</td></tr>`).join('')}
-  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td><td class="n"><b>${dec(tot.ot20)}</b></td><td></td></tr></table>
+  <table><tr><th>Date</th><th>Regular</th><th>Extra</th><th>Explanation/Justification — What duties are you performing?</th></tr>
+  ${rows.map(({d, e, c}) => `<tr><td class="n">${d.getDate()}</td><td class="n">${c ? dec(c.reg) : ''}</td><td class="n">${c ? dec(c.ot15) : ''}</td><td class="ex">${e ? esc(e.note) : ''}</td></tr>`).join('')}
+  <tr><td class="n"><b>Total</b></td><td class="n"><b>${dec(tot.reg)}</b></td><td class="n"><b>${dec(tot.ot15)}</b></td><td></td></tr></table>
   <div style="font-size:7.5pt;margin-top:2px">* If hours listed under "overtime" please explain in "Explanation" column.</div>
   <div class="foot"><div class="calc">${L.map(l => l ? `<div>${dec(l.min)} Hours (${l.n}) × ${money(l.rate)} Rate = ${money(l.amt)}</div>` : '<div>_____ Hours × _____ Rate = _____</div>').join('')}<div><b>TOTAL ${money(pay)}</b></div></div>
   <div>${profile.budget.map(b => `<div class="sig" style="margin-top:12px">${esc(b) || '&nbsp;'}<br>Budget Code (MUST BE COMPLETED)</div>`).join('')}</div>
@@ -679,9 +674,9 @@ function download(name, text, type){
 $('#printBtn').onclick = () => { renderSheet(); try{ window.print(); }catch(e){ toast('Printing not available here'); } };
 $('#csvBtn').onclick = () => {
   const p = periodOf(perRef), {tot, rows} = periodData(p), q = s => '"' + String(s).replace(/"/g, '""') + '"';
-  const out = [['Date','Regular','OT 1.5','OT 2.0','Explanation'].join(',')];
-  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? dec(c.ot15) : '', c ? dec(c.ot20) : '', q(e ? e.note : '')].join(',')));
-  out.push(['TOTAL', dec(tot.reg), dec(tot.ot15), dec(tot.ot20), ''].join(','));
+  const out = [['Date','Regular','Extra','Explanation'].join(',')];
+  rows.forEach(({k, e, c}) => out.push([k, c ? dec(c.reg) : '', c ? dec(c.ot15) : '', q(e ? e.note : '')].join(',')));
+  out.push(['TOTAL', dec(tot.reg), dec(tot.ot15), ''].join(','));
   download('timesheet-' + keyOf(p.end).slice(0,7) + '.csv', out.join('\n'), 'text/csv');
 };
 $('#copyBtn').onclick = async () => {
@@ -697,17 +692,17 @@ function fillProfile(){
   $('#pShiftM').innerHTML = Array.from({length:60}, (_, i) => i).map(m => `<option value="${m}">${m} min</option>`).join('');
   $('#pStart').innerHTML = Array.from({length:28}, (_, i) => `<option value="${i+1}">${i+1}${i === 0 ? ' (calendar month)' : ''}</option>`).join('');
   $('#pShiftH').value = Math.floor(profile.shiftMin / 60); $('#pShiftM').value = profile.shiftMin % 60;
-  $('#pXcat').value = profile.extraCat; $('#pStart').value = profile.periodStart; $('#pFmt').value = profile.fmt;
+  $('#pStart').value = profile.periodStart; $('#pFmt').value = profile.fmt;
   [['pName','name'],['pOffice','office'],['pPosition','position'],['pEmpId','empId']].forEach(([id, f]) => $('#' + id).value = profile[f]);
-  [['rReg','reg'],['rOt15','ot15'],['rOt20','ot20']].forEach(([id, f]) => $('#' + id).value = profile.rates[f]);
+  [['rReg','reg'],['rOt15','ot15']].forEach(([id, f]) => $('#' + id).value = profile.rates[f]);
   profile.budget.forEach((b, i) => $('#b' + i).value = b);
 }
 function saveProfile(){
   const sm = (+$('#pShiftH').value) * 60 + (+$('#pShiftM').value);
   if(sm < STEP){ toast('Shift must be at least 1 minute'); $('#pShiftM').value = STEP; return saveProfile(); }
-  profile.shiftMin = sm; profile.extraCat = $('#pXcat').value; profile.periodStart = +$('#pStart').value; profile.fmt = $('#pFmt').value;
+  profile.shiftMin = sm; profile.periodStart = +$('#pStart').value; profile.fmt = $('#pFmt').value;
   [['pName','name'],['pOffice','office'],['pPosition','position'],['pEmpId','empId']].forEach(([id, f]) => profile[f] = $('#' + id).value.trim());
-  [['rReg','reg'],['rOt15','ot15'],['rOt20','ot20']].forEach(([id, f]) => profile.rates[f] = $('#' + id).value);
+  [['rReg','reg'],['rOt15','ot15']].forEach(([id, f]) => profile.rates[f] = $('#' + id).value);
   profile.budget = [0,1,2].map(i => $('#b' + i).value.trim());
   store.set('tt_profile', profile);
   if(isEmpty(draft)) draft.extraCat = profile.extraCat;

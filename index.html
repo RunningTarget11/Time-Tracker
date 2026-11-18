@@ -410,7 +410,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '2.0.2';
+const APP_VERSION = '2.0.3';
 document.getElementById('splashVer').textContent = 'Version ' + APP_VERSION;   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
@@ -769,7 +769,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- Start up ---------- */
 fillProfile(); renderToday(); renderUpdates();
-if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').catch(() => {}); }catch(e){} }
+if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).catch(() => {}); }catch(e){} }
 (async function boot(){
   const minSplash = new Promise(r => setTimeout(r, 2300));
   if(settings.autoUpdate){ $('#splashSub').textContent = 'Checking for updates…'; await Promise.race([checkUpdates(false), new Promise(r => setTimeout(r, 3000))]); }

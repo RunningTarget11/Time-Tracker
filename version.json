@@ -1,7 +1,14 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "2.0.1",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Version number shown on the splash screen"
+      ]
+    },
     {
       "version": "2.0.0",
       "date": "Nov 17, 2026",

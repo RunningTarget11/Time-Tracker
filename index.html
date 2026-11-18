@@ -51,7 +51,8 @@ button,.big{transition:transform .08s}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:90}
 .pop{animation:popv .35s ease}
 @keyframes popv{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
-#splash .sub{position:relative;text-align:center;color:#f3e3cc;margin:14px 0 calc(28px + var(--safe-bot));font-size:.9rem}
+#splash .sub{position:relative;text-align:center;color:#f3e3cc;margin:14px 0 6px;font-size:.9rem}
+#splash .ver{position:relative;text-align:center;margin:0 0 calc(22px + var(--safe-bot));font-size:.8rem;font-weight:700;letter-spacing:1px;color:#ffd166}
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* Layout */
@@ -214,6 +215,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
   <div class="shade"></div>
   <h1><img class="sw" src="img/stopwatch.png" alt=""><img class="logo" src="img/logo.png" alt="Stacy's Time Tracker"></h1>
   <div class="sub" id="splashSub">Loading…</div>
+  <div class="ver" id="splashVer"></div>
 </div>
 
 <header class="top">
@@ -405,7 +407,8 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '2.0.0';   // bump this AND version.json for every release
+const APP_VERSION = '2.0.1';
+document.getElementById('splashVer').textContent = 'Version ' + APP_VERSION;   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];

@@ -1,7 +1,15 @@
 {
-  "version": "1.9.1",
+  "version": "2.0.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "2.0.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Time is entered only with Start and End clock times",
+        "Total, Regular and Extra are figured automatically from the clock times"
+      ]
+    },
     {
       "version": "1.9.1",
       "date": "Nov 17, 2026",

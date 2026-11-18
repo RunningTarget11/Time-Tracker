@@ -240,32 +240,25 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
     <div style="text-align:center;margin:-4px 0 12px"><button class="chip" id="goToday" style="display:none">↩ Back to today</button></div>
 
     <div class="card">
-      <h3 class="h3i"><img class="tick" src="img/stopwatch.png" alt="">Quick entry</h3>
-      <button class="big shine" id="fullShift">✓ Worked my normal shift</button>
-      <div class="muted" style="margin-top:10px">…or enter clock times:</div>
+      <h3 class="h3i"><img class="tick" src="img/stopwatch.png" alt="">Clock in &amp; out</h3>
       <div class="row2" style="margin-top:8px">
         <div class="f">Start<div class="dclock" id="tStart"></div></div>
         <div class="f">End<div class="dclock" id="tEnd"></div></div>
       </div>
-      <div class="clockres" id="clockRes"></div>
     </div>
 
     <div class="card">
       <h3>Hours for this day</h3>
-      <div class="lbl" style="font-weight:700">Total hours worked</div>
-      <div class="stepper totrow" data-f="tot"><button data-d="-1" aria-label="Minus 1 minute">−</button>
-        <div class="dclock" id="tTot"><select class="th" aria-label="Hours"></select><b>:</b><select class="tm" aria-label="Minutes"></select></div>
-        <button data-d="1" aria-label="Plus 1 minute">+</button></div>
-      <div class="line">
+      <div class="line" style="border-top:0">
         <div class="lbl">Regular<small id="shiftNote"></small></div>
         <div class="autoval" id="vReg"></div>
       </div>
       <div class="line extra">
-        <div class="lbl">Extra hours<small>Figured automatically — time over your shift</small>
+        <div class="lbl">Extra hours<small>Time over your shift</small>
         </div>
         <div class="autoval x" id="vExtra"></div>
       </div>
-      <div class="totalbar"><span>Day total</span><span id="dayTotal">0:00</span></div>
+      <div class="totalbar"><span>Total worked</span><span id="dayTotal">0:00</span></div>
     </div>
 
     <div class="saved" id="savedMsg"></div>
@@ -412,7 +405,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.9.1';   // bump this AND version.json for every release
+const APP_VERSION = '2.0.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -495,7 +488,6 @@ function renderToday(){
   $('#payLbl').textContent = left <= 1 ? '💰 Last day of the pay period!' : '💰 ' + left + ' days left in this pay period';
   $('#payBar').style.width = Math.round((all - left + 1) / all * 100) + '%';
   $('#goToday').style.display = sameDay(cur, t) ? 'none' : 'inline-block';
-  $('#fullShift').textContent = '✓ Worked my normal shift (' + fmtH(profile.shiftMin) + ')';
   $('#shiftNote').textContent = 'Up to your ' + fmtH(profile.shiftMin) + ' shift';
   setClock('#tStart', draft.start); setClock('#tEnd', draft.end);
   paintNumbers();
@@ -503,11 +495,7 @@ function renderToday(){
 function paintNumbers(){
   $$('#v-today .stepper .val').forEach(v => v.textContent = fmtH(draft[v.parentNode.dataset.f]));
   const tot = draft.reg + draft.extra;
-  $('#tTot .th').value = String(Math.min(24, Math.floor(tot / 60))); $('#tTot .tm').value = String(tot % 60);
   $('#vReg').textContent = fmtH(draft.reg); $('#vExtra').textContent = fmtH(draft.extra);
-  const cr = $('#clockRes'), both = draft.start && draft.end;
-  cr.classList.toggle('show', !!both);
-  if(both) cr.innerHTML = 'Worked ' + fmtH(tot) + ' = ' + fmtH(draft.reg) + ' regular' + (draft.extra ? ' + <span class="x">' + fmtH(draft.extra) + ' extra</span>' : '');
   $('#dayTotal').textContent = fmtH(draft.reg + draft.extra);
 }
 let saveT;
@@ -520,7 +508,7 @@ function save(quiet){
 function changed(){ paintNumbers(); save(); }
 
 function fromTimes(){
-  if(!draft.start || !draft.end) return;
+  if(!draft.start || !draft.end) return setTotal(0);
   const [sh, sm] = draft.start.split(':').map(Number), [eh, em] = draft.end.split(':').map(Number);
   let mins = (eh*60 + em) - (sh*60 + sm); if(mins < 0) mins += 1440; // overnight shift
   setTotal(mins);
@@ -552,10 +540,9 @@ function setTotal(m){
   draft.reg = Math.min(m, profile.shiftMin);
   draft.extra = Math.max(0, m - profile.shiftMin);
   changed();
-  if(m !== before){ const v = $('#tTot'); v.classList.remove('pop'); void v.offsetWidth; v.classList.add('pop'); }
+  if(m !== before){ const v = $('#dayTotal'); v.classList.remove('pop'); void v.offsetWidth; v.classList.add('pop'); }
 }
 function step(f, d){
-  if(f === 'tot'){ draft.start = draft.end = ''; setClock('#tStart', ''); setClock('#tEnd', ''); return setTotal(draft.reg + draft.extra + d); }
   draft[f] = Math.max(0, Math.min(1440, draft[f] + d));
   changed();
 }
@@ -565,9 +552,6 @@ $$('#v-today .stepper button').forEach(b => {
   b.addEventListener('pointerdown', e => { e.preventDefault(); step(f, d); let n = 0; t1 = setTimeout(() => t2 = setInterval(() => { n++; step(f, d * (n > 30 ? 10 : n > 12 ? 5 : 1)); }, 110), 450); });
   ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, stop));
 });
-$('#tTot .th').innerHTML = Array.from({length:25}, (_, i) => `<option value="${i}">${i}</option>`).join('');
-$('#tTot .tm').innerHTML = Array.from({length:60}, (_, i) => `<option value="${i}">${pad(i)}</option>`).join('');
-$$('#tTot select').forEach(x => x.onchange = () => { draft.start = draft.end = ''; setClock('#tStart', ''); setClock('#tEnd', ''); setTotal(+$('#tTot .th').value * 60 + +$('#tTot .tm').value); });
 /* digital clock pickers: hour : minute (6-min steps) AM/PM, value stored as 24h "HH:MM" */
 function buildClock(sel, onSet){
   const el = $(sel);
@@ -599,7 +583,6 @@ function setClock(sel, v){
 }
 buildClock('#tStart', v => { draft.start = v; fromTimes(); save(); });
 buildClock('#tEnd', v => { draft.end = v; fromTimes(); save(); });
-$('#fullShift').onclick = () => { draft.reg = profile.shiftMin; draft.extra = 0; changed(); celebrate('Logged ' + fmtH(profile.shiftMin) + ' — ' + CHEERS[Math.floor(Math.random() * CHEERS.length)]); };
 $('#clearDay').onclick = () => ask('Clear all time for ' + shortDate(cur) + '?', () => { draft = blankEntry(); save(); renderToday(); toast('Day cleared'); });
 function goDay(d){ save(true); cur = d; draft = getEntry(keyOf(cur)); renderToday(); }
 $('#prevDay').onclick = () => goDay(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()-1));

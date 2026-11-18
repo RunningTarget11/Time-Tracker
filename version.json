@@ -1,7 +1,15 @@
 {
-  "version": "1.4.1",
+  "version": "1.5.0",
   "date": "2026-11-17",
   "releases": [
+    {
+      "version": "1.5.0",
+      "date": "Nov 17, 2026",
+      "notes": [
+        "Enter Total hours worked for the day; Regular and Extra hours are filled in automatically",
+        "Anything over the 3:48 shift goes to Extra hours"
+      ]
+    },
     {
       "version": "1.4.1",
       "date": "Nov 17, 2026",

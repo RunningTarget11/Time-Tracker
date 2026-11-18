@@ -69,6 +69,12 @@ nav.tabs button.on{color:var(--brand);font-weight:700}
 .dclock select option{color:#000;background:#fff}
 .dclock b{color:#ffd166;font:700 1.25rem monospace}
 .dclock.empty select{color:#8a7563}
+.totrow{margin:6px 0 4px;gap:10px}
+.totrow .dclock{flex:1;margin:0;justify-content:center}
+.totrow .dclock select{flex:0 1 auto;width:auto;font-size:1.6rem;padding:4px 6px}
+.totrow .dclock b{font-size:1.6rem}
+.autoval{min-width:80px;text-align:right;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums;padding-right:8px}
+.autoval.x{color:var(--extra)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label.f{display:block;font-size:.82rem;color:var(--muted)}
 label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;font-size:1rem;color:var(--ink)}
@@ -228,15 +234,19 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
     <div class="card">
       <h3>Hours for this day</h3>
+      <div class="lbl" style="font-weight:700">Total hours worked</div>
+      <div class="stepper totrow" data-f="tot"><button data-d="-1" aria-label="Minus 1 minute">−</button>
+        <div class="dclock" id="tTot"><select class="th" aria-label="Hours"></select><b>:</b><select class="tm" aria-label="Minutes"></select></div>
+        <button data-d="1" aria-label="Plus 1 minute">+</button></div>
       <div class="line">
         <div class="lbl">Regular<small id="shiftNote"></small></div>
-        <div class="stepper" data-f="reg"><button data-d="-1">−</button><span class="val"></span><button data-d="1">+</button></div>
+        <div class="autoval" id="vReg"></div>
       </div>
       <div class="line extra">
-        <div class="lbl">Extra hours<small>Time over your shift</small>
+        <div class="lbl">Extra hours<small>Figured automatically — time over your shift</small>
           <div class="seg" id="xcat"><button data-c="ot15">1.5×</button><button data-c="ot20">2.0×</button></div>
         </div>
-        <div class="stepper" data-f="extra"><button data-d="-1">−</button><span class="val"></span><button data-d="1">+</button></div>
+        <div class="autoval x" id="vExtra"></div>
       </div>
       <div class="totalbar"><span>Day total</span><span id="dayTotal">0:00</span></div>
     </div>
@@ -392,7 +402,7 @@ table.sheet tfoot td{font-weight:800;background:#f8f3ec;border-top:2px solid #3a
 
 <script>
 /* ===== Stacy's Time Tracker ===== */
-const APP_VERSION = '1.4.1';   // bump this AND version.json for every release
+const APP_VERSION = '1.5.0';   // bump this AND version.json for every release
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -477,7 +487,10 @@ function renderToday(){
   paintNumbers();
 }
 function paintNumbers(){
-  $$('#v-today .stepper').forEach(s => s.querySelector('.val').textContent = fmtH(draft[s.dataset.f]));
+  $$('#v-today .stepper .val').forEach(v => v.textContent = fmtH(draft[v.parentNode.dataset.f]));
+  const tot = draft.reg + draft.extra;
+  $('#tTot .th').value = String(Math.min(24, Math.floor(tot / 60))); $('#tTot .tm').value = String(tot % 60);
+  $('#vReg').textContent = fmtH(draft.reg); $('#vExtra').textContent = fmtH(draft.extra);
   $$('#xcat button').forEach(b => b.classList.toggle('on', b.dataset.c === draft.extraCat));
   $('#dayTotal').textContent = fmtH(draft.reg + draft.extra);
   const need = draft.extra > 0 && !draft.note.trim();
@@ -497,17 +510,19 @@ function fromTimes(){
   if(!draft.start || !draft.end) return;
   const [sh, sm] = draft.start.split(':').map(Number), [eh, em] = draft.end.split(':').map(Number);
   let mins = (eh*60 + em) - (sh*60 + sm); if(mins < 0) mins += 1440; // overnight shift
-  const worked = Math.max(0, mins - draft.brk);
-  draft.reg = Math.min(worked, profile.shiftMin);
-  draft.extra = Math.max(0, worked - profile.shiftMin);
+  setTotal(mins - draft.brk);
+}
+/* total hours worked → first part is Regular (up to the shift), the rest is Extra */
+function setTotal(m){
+  m = Math.max(0, Math.min(1440, Math.round(m)));
+  draft.reg = Math.min(m, profile.shiftMin);
+  draft.extra = Math.max(0, m - profile.shiftMin);
   changed();
 }
 function step(f, d){
   if(f === 'brk'){ draft.brk = Math.max(0, draft.brk + d); fromTimes(); changed(); return; }
-  if(f === 'reg'){
-    if(d > 0 && draft.reg >= profile.shiftMin){ draft.extra += d; if(!draft._t){ toast('Over your shift — added to Extra hours'); draft._t = 1; } }
-    else draft.reg = Math.max(0, Math.min(profile.shiftMin, draft.reg + d));
-  } else draft[f] = Math.max(0, Math.min(1440, draft[f] + d));
+  if(f === 'tot'){ draft.start = draft.end = ''; setClock('#tStart', ''); setClock('#tEnd', ''); return setTotal(draft.reg + draft.extra + d); }
+  draft[f] = Math.max(0, Math.min(1440, draft[f] + d));
   changed();
 }
 $$('#v-today .stepper button').forEach(b => {
@@ -516,6 +531,9 @@ $$('#v-today .stepper button').forEach(b => {
   b.addEventListener('pointerdown', e => { e.preventDefault(); step(f, d); let n = 0; t1 = setTimeout(() => t2 = setInterval(() => { n++; step(f, d * (n > 30 ? 10 : n > 12 ? 5 : 1)); }, 110), 450); });
   ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, stop));
 });
+$('#tTot .th').innerHTML = Array.from({length:25}, (_, i) => `<option value="${i}">${i}</option>`).join('');
+$('#tTot .tm').innerHTML = Array.from({length:60}, (_, i) => `<option value="${i}">${pad(i)}</option>`).join('');
+$$('#tTot select').forEach(x => x.onchange = () => { draft.start = draft.end = ''; setClock('#tStart', ''); setClock('#tEnd', ''); setTotal(+$('#tTot .th').value * 60 + +$('#tTot .tm').value); });
 $$('#xcat button').forEach(b => b.onclick = () => { draft.extraCat = b.dataset.c; changed(); });
 /* digital clock pickers: hour : minute (6-min steps) AM/PM, value stored as 24h "HH:MM" */
 function buildClock(sel, onSet){
